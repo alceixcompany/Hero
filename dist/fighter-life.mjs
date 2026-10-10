@@ -1,3 +1,4 @@
+import {impactAt} from './battle-presentation.mjs';
 // Elimination belongs to a battle, not to a render or animation event.
 export function syncFighterLife(actor,hp,event,newBattle=false){
  if(newBattle){actor.eliminated=false;actor.fallingStarted=false;actor.pendingDeathEvent=null;actor.dead=0;actor.model?.reset();}
@@ -5,6 +6,6 @@ export function syncFighterLife(actor,hp,event,newBattle=false){
  actor.hp=actor.eliminated?0:hp;
 }
 export function shouldFall(actor,action,progress){
- if(actor.eliminated&&!(actor.pendingDeathEvent&&actor.pendingDeathEvent===action?.event&&progress<.48))actor.fallingStarted=true;
+ if(actor.eliminated&&!(actor.pendingDeathEvent&&actor.pendingDeathEvent===action?.event&&progress<impactAt(action.event)))actor.fallingStarted=true;
  return !!actor.fallingStarted;
 }

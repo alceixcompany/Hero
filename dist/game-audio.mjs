@@ -80,8 +80,14 @@ export class GameAudio{
  }
  attack(event){
   if(!this.ready())return;const t=this.ctx.currentTime,pan=event.side===0?-.3:.3,family=soundFamily(event.attacker);
+  if(event.type==='charge'){this.note(85,.8,.08,'triangle',t,undefined,pan,220);this.note(220,.7,.035,'sine',t+.2,undefined,pan,440);this.noise(.6,.05,900,t,pan);return;}
   this.noise(.12,.07,family==='blade'?4600:2200,t,pan,undefined,'highpass');
   if(event.combo)[330,440,660].forEach((f,i)=>this.note(f,.25,.09,'triangle',t+i*.07,undefined,pan));
+ }
+ exchangeBeat(event,kind){
+  if(!this.ready())return;const t=this.ctx.currentTime,pan=event.side===0?.2:-.2;
+  if(kind==='block'){this.noise(.09,.08,1400,t,pan);this.note(280,.13,.05,'triangle',t,undefined,pan,100);}
+  else{this.noise(.12,.065,2600,t,pan,undefined,'bandpass');this.note(140,.11,.05,'sine',t,undefined,-pan,55);}
  }
  impact(event){
   if(!this.ready())return;const t=this.ctx.currentTime,pan=event.side===0?.3:-.3,family=soundFamily(event.attacker),strength=event.crit||event.special||event.combo?1.3:1;

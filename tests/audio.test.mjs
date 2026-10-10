@@ -12,8 +12,8 @@ function audioFixture(){
 }
 test('all character sound families, combos, commands and results schedule valid finite audio envelopes',async()=>{
  const {audio,scheduled}=audioFixture();await audio.unlock();assert.equal(new Set(HEROES.map(h=>soundFamily(h.id))).size,8);
- for(const h of HEROES){const event={attacker:h.id,side:h.index%2,special:true,crit:true,combo:{name:'test'},defeated:['hulk'],absorbed:12};audio.attack(event);audio.impact(event);audio.impact({...event,dodge:true});}
- for(const id of ['overdrive','barrier','rally'])audio.command(id,0);for(const kind of ['sale','bid','click'])audio.ui(kind);audio.result();assert.ok(scheduled.length>200);
+ for(const h of HEROES){const event={attacker:h.id,side:h.index%2,special:true,crit:true,combo:{name:'test'},defeated:['hulk'],absorbed:12};audio.attack(event);audio.attack({...event,type:'charge'});audio.exchangeBeat(event,'block');audio.exchangeBeat(event,'parry');audio.impact(event);audio.impact({...event,dodge:true});}
+ for(const id of ['overdrive','barrier','rally','counter'])audio.command(id,0);for(const kind of ['sale','bid','click'])audio.ui(kind);audio.result();assert.ok(scheduled.length>200);
 });
 test('mute gates effects immediately, silence stops the music loop, and saved volumes are bounded',async()=>{
  const {audio,scheduled}=audioFixture();await audio.unlock();audio.setScene('arena');assert.ok(audio.timer);audio.setScene('silent');assert.equal(audio.timer,null);assert.equal(audio.musicBus.gain.value,0);

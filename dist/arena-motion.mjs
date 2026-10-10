@@ -1,14 +1,15 @@
+import {impactAt} from './battle-presentation.mjs';
 import {cinematicProgress,exchangeDuration} from './combat-choreography.mjs';
 export function advanceExchange(action,dt,playing){
  if(!action)return 1;
  if(playing||action.finishWhilePaused)action.elapsed+=Math.max(0,Math.min(.05,dt));
- const progress=Math.min(1,action.elapsed/action.duration);return action.event?.finisher&&!action.reduced?cinematicProgress(progress):progress;
+ const progress=Math.min(1,action.elapsed/action.duration);return action.event?.finisher&&!action.reduced?cinematicProgress(progress,impactAt(action.event)):progress;
 }
 
 export function retimeExchange(action,speed,reduced=false){
  if(!action)return;
  const progress=Math.min(1,action.elapsed/action.duration);
- action.duration=exchangeDuration(speed,reduced,action.event?.finisher);
+ action.duration=exchangeDuration(speed,reduced,action.event?.finisher,action.event);
  action.elapsed=progress*action.duration;
 }
 

@@ -1,3 +1,5 @@
+import {climaxReady,chargeClimax,underClimax,CLIMAXES} from './battle-climax.mjs';
+import {combatSequence} from './battle-presentation.mjs';
 import {createTerrain,hasCover,damageTerrain} from './battle-terrain.mjs';
 import {metrics,grantShield,absorbShield} from './battle-highlights.mjs';
 import {resolvedPlan,validPlan,adjacent,zoneOf,selectTarget} from './strategy.mjs';
@@ -47,21 +49,26 @@ export function pass(g){if(g.phase!=='auction')return false;if(g.leader!==null){
 function finishLot(g,winner){const id=g.pool[g.round];if(winner!==null){g.players[winner].coins-=g.bid;g.players[winner].team.push(id);}g.history.push({id,winner,price:winner===null?0:g.bid});g.round++;g.bid=0;g.leader=null;g.passes=0;g.turn=g.round%2;if(g.round>=10||g.players.every(p=>p.team.length===5)){g.phase='ready';for(let p=0;p<2;p++){if(!g.players[p].team.length){const used=g.players.flatMap(x=>x.team);const free=g.pool.find(id=>!used.includes(id));g.players[p].team.push(free);g.history.push({id:free,winner:p,price:0,reinforcement:true});}}}}
 export function synergy(ids){const counts={};ids.forEach(id=>counts[hero(id).group]=(counts[hero(id).group]||0)+1);return Math.min(12,Object.values(counts).reduce((a,n)=>a+Math.max(0,n-1)*4,0));}
 export function botDecision(g,rng=Math.random){const h=hero(g.pool[g.round]);const p=g.players[1];const remaining=Math.max(1,Math.min(5-p.team.length,10-g.round));const value=Math.max(2,Math.round(h.rating/15+(rng()-.5)*3));const max=Math.min(p.coins,Math.max(1,Math.round(p.coins/remaining)+2),value);return canBid(g,1,g.bid+1)&&g.bid<max?g.bid+1:null;}
-export function createBattle(g,rng=Math.random){const arena=ARENAS.find(a=>a.id===g.arena)||ARENAS[0];const fighters=g.players.map((p,side)=>p.team.map(id=>{const placement=resolvedPlan(p.team,g.plans?.[side],hero).find(p=>p.id===id);const h=hero(id);const stats=h.stats.map((n,i)=>n*(arena.boost.includes(i)?1.1:1));const maxHp=Math.round(65+stats[3]*12);return {id,side,slot:placement.slot,role:placement.role,guardRound:-1,metrics:{damage:0,protection:0,healing:0,knockouts:0},shieldSources:[],stats,hp:maxHp,maxHp,shield:0,weaken:false,actions:0,synergy:synergy(p.team)};}));return {fighters,terrain:createTerrain(),strategy:g.plans?.length===2&&g.plans.every((p,i)=>validPlan(g.players[i].team,p)),arena:g.arena,links:g.players.map(p=>teamLinks(p.team).map(link=>({id:link.id,charge:0,uses:0}))),control:[0,1].map(()=>({energy:35,tactic:'balanced',turns:0,commandAt:-3,tacticAt:-2,overdrive:0,focus:null})),commands:[],round:0,queue:[],done:false,winner:null,events:[],rng,luck:Math.min(25,Math.max(0,g.luck))/100};}
+export function createBattle(g,rng=Math.random){const arena=ARENAS.find(a=>a.id===g.arena)||ARENAS[0];const fighters=g.players.map((p,side)=>p.team.map(id=>{const placement=resolvedPlan(p.team,g.plans?.[side],hero).find(p=>p.id===id);const h=hero(id);const stats=h.stats.map((n,i)=>n*(arena.boost.includes(i)?1.1:1));const maxHp=Math.round(65+stats[3]*12);return {id,side,slot:placement.slot,role:placement.role,guardRound:-1,metrics:{damage:0,protection:0,healing:0,knockouts:0},shieldSources:[],stats,hp:maxHp,maxHp,shield:0,weaken:false,actions:0,climaxUsed:false,synergy:synergy(p.team)};}));return {fighters,pendingClimax:null,terrain:createTerrain(),strategy:g.plans?.length===2&&g.plans.every((p,i)=>validPlan(g.players[i].team,p)),arena:g.arena,links:g.players.map(p=>teamLinks(p.team).map(link=>({id:link.id,charge:0,uses:0}))),control:[0,1].map(()=>({energy:35,tactic:'balanced',turns:0,commandAt:-3,tacticAt:-2,overdrive:0,focus:null})),commands:[],round:0,queue:[],done:false,winner:null,events:[],rng,luck:Math.min(25,Math.max(0,g.luck))/100};}
 export function linkStatus(b,side){
  return (b?.links[side]??[]).map(state=>{const link=TEAM_LINKS.find(l=>l.id===state.id);return {...link,...state,active:link.members.every(id=>b.fighters[side].some(f=>f.id===id&&f.hp>0))};});
 }
 export function battleStep(b){
  if(b.done)return null;
  const living=s=>b.fighters[s].filter(f=>f.hp>0);
- if(!b.queue.length){b.round++;b.queue=b.fighters.flat().filter(f=>f.hp>0).map(f=>({f,initiative:f.stats[2]+f.stats[1]*.15+b.rng()*2-(b.strategy&&zoneOf(f.slot).id==='high'&&!hero(f.id).flight?1:0)})).sort((a,c)=>c.initiative-a.initiative).map(x=>x.f);}
- let attacker=b.queue.shift();while(attacker&&attacker.hp<=0)attacker=b.queue.shift();if(!attacker)return battleStep(b);
- const opponents=living(1-attacker.side),randomTarget=opponents[Math.floor(b.rng()*opponents.length)];
- const control=b.control[attacker.side],defender=b.control[1-attacker.side],selection=selectTarget(b,attacker,opponents,randomTarget,control.focus,hero),target=selection.target;
+ const pending=b.pendingClimax;
+ if(!pending&&!b.queue.length){b.round++;b.queue=b.fighters.flat().filter(f=>f.hp>0).map(f=>({f,initiative:f.stats[2]+f.stats[1]*.15+b.rng()*2-(b.strategy&&zoneOf(f.slot).id==='high'&&!hero(f.id).flight?1:0)})).sort((a,c)=>c.initiative-a.initiative).map(x=>x.f);}
+ let attacker=pending?b.fighters[pending.side].find(f=>f.id===pending.attacker&&f.hp>0):b.queue.shift();
+ if(pending)b.pendingClimax=null;
+ while(attacker&&attacker.hp<=0)attacker=b.queue.shift();if(!attacker)return battleStep(b);
+ const opponents=living(1-attacker.side),randomTarget=pending?(opponents.find(f=>f.id===pending.target)||opponents[0]):opponents[Math.floor(b.rng()*opponents.length)];
+ const control=b.control[attacker.side],defender=b.control[1-attacker.side],selection=selectTarget(b,attacker,opponents,randomTarget,pending?.target??control.focus,hero),target=selection.target;
  if(!target){finish();return null;}
+ if(!pending&&climaxReady(attacker))return chargeClimax(b,attacker,target);
  const before=opponents.map(f=>({id:f.id,hp:f.hp,shield:f.shield}));
  attacker.actions++;control.turns++;control.energy=Math.min(100,control.energy+8);defender.energy=Math.min(100,defender.energy+4);
- const special=attacker.actions%3===0,h=hero(attacker.id),crit=b.rng()<b.luck;
+ const ultimate=pending&&!pending.interrupted?CLIMAXES[attacker.id]:null;
+ const special=pending?!!ultimate:attacker.actions%3===0,h=hero(attacker.id),crit=b.rng()<b.luck;
  const dodge=b.rng()<Math.min(.20,Math.min(.16,Math.max(.02,(target.stats[2]-attacker.stats[1])*.012+.04))+(defender.tactic==='guard'?.04:0));
  const variance=1+(b.rng()*2-1)*b.luck;
  const activeLinks=linkStatus(b,attacker.side).filter(l=>l.active&&l.members.includes(attacker.id));
@@ -75,6 +82,7 @@ export function battleStep(b){
  if(attacker.id==='hulk')raw*=1+(1-attacker.hp/attacker.maxHp)*.3;
  if(attacker.weaken){raw*=.65;attacker.weaken=false;}
  if(b.strategy){raw*=attacker.role==='protect'?.85:attacker.role==='hunt'?.92:1;const zone=zoneOf(attacker.slot).id;raw*=zone==='cover'?(hasCover(b,attacker)?.92:1):zone==='open'?1.08: h.combat==='ranged'?(h.flight?1.12:1.08):1;}
+ if(ultimate)raw*=ultimate.multiplier;
  const pierce=special&&h.ability==='pierce';
  let damage=dodge?0:Math.max(5,Math.round((raw-target.stats[3]*(pierce?.3:.9)*(defender.tactic==='guard'?1.25:defender.tactic==='rush'?.7:1))*variance*(crit?1.5:1)*(special?1.25:1)))+(combo?.bonus??0);
  const extras=[],strategy=[];let guard=null;
@@ -94,7 +102,7 @@ export function battleStep(b){
   if(h.ability==='heal'){const heal=Math.min(24,attacker.maxHp-attacker.hp);attacker.hp+=heal;metrics(attacker).healing+=heal;extras.push(`${h.name} +${heal} can yeniledi`);}
   if(h.ability==='shield'){living(attacker.side).forEach(f=>grantShield(f,15,attacker.id));extras.push('Takıma +15 kalkan');}
   if(h.ability==='weaken'&&target.hp>0){target.weaken=true;extras.push('Hedefin sonraki saldırısı −%35');}
-  if(h.ability==='aoe'){const spread=b.strategy?opponents.filter(f=>f!==target&&f.hp>0&&adjacent(f.slot,target.slot)):opponents.filter(f=>f!==target&&f.hp>0);const amount=Math.round(8+attacker.stats[5]);spread.forEach(f=>{const absorb=absorbShield(b,f,amount);f.hp=Math.max(0,f.hp-(amount-absorb));});extras.push(b.strategy?'Alan hasarı hedefin komşularına yayıldı':'Alan hasarı diğer rakiplere yayıldı');}
+  if(h.ability==='aoe'){const spread=b.strategy&&!ultimate?opponents.filter(f=>f!==target&&f.hp>0&&adjacent(f.slot,target.slot)):opponents.filter(f=>f!==target&&f.hp>0);const amount=Math.round((8+attacker.stats[5])*(ultimate?1.4:1));spread.forEach(f=>{const absorb=absorbShield(b,f,amount);f.hp=Math.max(0,f.hp-(amount-absorb));});extras.push(b.strategy&&!ultimate?'Alan hasarı hedefin komşularına yayıldı':'Alan hasarı diğer rakiplere yayıldı');}
  }
  if(readyLink){
   const effect=readyLink.effect;
@@ -106,18 +114,27 @@ export function battleStep(b){
  metrics(attacker).damage+=hits.reduce((n,h)=>n+h.damage,0);
  const defeated=opponents.filter(f=>f.hp===0).map(f=>f.id);
  metrics(attacker).knockouts+=defeated.length;
- const event={hits,round:b.round,attacker:attacker.id,side:attacker.side,target:target.id,damage,absorbed,crit:crit&&!dodge,dodge,special:special&&!dodge,skill:h.skill,overdrive,combo,guard,strategy,flank:selection.flank,intercepted:selection.intercepted,defeated,extras,knockout:target.hp===0};
+ const event={climax:pending?{...pending,phase:'release',cancelled:pending.interrupted}:null,hits,round:b.round,attacker:attacker.id,side:attacker.side,target:target.id,damage,absorbed,crit:crit&&!dodge,dodge,special:special&&!dodge,skill:h.skill,overdrive,combo,guard,strategy,flank:selection.flank,intercepted:selection.intercepted,defeated,extras,knockout:target.hp===0};
+ if(ultimate)event.skill=ultimate.name;
+ if(pending?.interrupted)event.extras.push('Zirve yeteneği kesildi · Normal saldırıya döndü');
+ event.sequence=combatSequence(h,event);
  event.terrain=damageTerrain(b,event,hero);for(const c of event.terrain)if(c.broken)event.extras.push(`${c.side===event.side?'Takımının':'Rakibin'} ${c.slot===0?'ön':'arka'} siperi kırıldı${b.strategy?' · Savunma bonusu kayboldu':''}`);
  b.events.push(event);finish();event.finisher=b.done&&!b.decision&&defeated.length>0&&!dodge;return event;
  function finish(){const alive=b.fighters.map((_,s)=>living(s).length);if(alive.includes(0)){b.done=true;b.winner=alive[0]>0?0:alive[1]>0?1:null;}else if(b.round>=40&&!b.queue.length){const health=b.fighters.map(fs=>fs.reduce((a,f)=>a+f.hp,0)/fs.reduce((a,f)=>a+f.maxHp,0));b.done=true;b.winner=Math.abs(health[0]-health[1])<.00001?null:health[0]>health[1]?0:1;b.decision=true;}}
 }
 
 export const TACTICS=[{id:'balanced',name:'Dengeli',desc:'Standart saldırı ve savunma.'},{id:'rush',name:'Hücum',desc:'+%18 saldırı, −%30 savunma.'},{id:'guard',name:'Savunma',desc:'−%10 saldırı, +%25 savunma, +4 puan kaçış.'}];
-export const COMMANDS=[{id:'overdrive',name:'Güç patlaması',cost:35,desc:'Sonraki 3 takım saldırısı +%25 hasar.',symbol:'↯'},{id:'barrier',name:'Takım kalkanı',cost:35,desc:'Yaşayan kahramanlara +22 kalkan (en fazla 60).',symbol:'◇'},{id:'rally',name:'İkinci nefes',cost:50,desc:'Yaşayan kahramanlara +20 can.',symbol:'✚'}];
-export function setTactic(b,side,id){const c=b?.control[side];if(!c||b.done||!TACTICS.some(t=>t.id===id)||c.tactic===id||c.turns-c.tacticAt<2)return false;c.tactic=id;c.tacticAt=c.turns;return true;}
+export const COMMANDS=[{id:'overdrive',name:'Güç patlaması',cost:35,desc:'Sonraki 3 takım saldırısı +%25 hasar.',symbol:'↯'},{id:'barrier',name:'Takım kalkanı',cost:35,desc:'Yaşayan kahramanlara +22 kalkan (en fazla 60).',symbol:'◇'},{id:'rally',name:'İkinci nefes',cost:50,desc:'Yaşayan kahramanlara +20 can.',symbol:'✚'},{id:'counter',name:'Karşı hamle',cost:35,desc:'Hazırlanan rakip zirve yeteneğini keser. Saldırı normal vuruşa dönüşür. Bekleme süresinden bağımsızdır.',symbol:'⚡'}];
+export function setTactic(b,side,id){const c=b?.control[side];if(!c||b.done||!TACTICS.some(t=>t.id===id)||c.tactic===id||c.turns-c.tacticAt<2&&!(id==='guard'&&underClimax(b,side)))return false;c.tactic=id;c.tacticAt=c.turns;return true;}
 export function focusTarget(b,side,id){if(!b||b.done||![0,1].includes(side))return false;if(id!==null&&!b.fighters[1-side].some(f=>f.id===id&&f.hp>0))return false;b.control[side].focus=id;return true;}
-export function canCommand(b,side,id){const c=b?.control[side],cmd=COMMANDS.find(x=>x.id===id);return !!(c&&cmd&&!b.done&&c.energy>=cmd.cost&&c.turns-c.commandAt>=3&&(id!=='overdrive'||!c.overdrive)&&b.fighters[side].some(f=>f.hp>0)&&(id!=='rally'||b.fighters[side].some(f=>f.hp>0&&f.hp<f.maxHp))&&(id!=='barrier'||b.fighters[side].some(f=>f.hp>0&&f.shield<60)));}
-export function battleCommand(b,side,id){if(!canCommand(b,side,id))return null;const cmd=COMMANDS.find(x=>x.id===id),c=b.control[side];c.energy-=cmd.cost;c.commandAt=c.turns;const affected=b.fighters[side].filter(f=>f.hp>0);let amount=0;if(id==='overdrive')c.overdrive=3;if(id==='barrier')affected.forEach(f=>{amount+=grantShield(f,22);});if(id==='rally')affected.forEach(f=>{const n=Math.min(20,f.maxHp-f.hp);f.hp+=n;amount+=n;});const event={id,side,name:cmd.name,round:b.round,amount,index:b.commands.length};b.commands.push(event);return event;}
-export function botBattleCommand(b,side=1){const fs=b.fighters[side],ratio=fs.reduce((n,f)=>n+f.hp,0)/fs.reduce((n,f)=>n+f.maxHp,0);for(const id of ratio<.55?['rally','barrier','overdrive']:['overdrive','barrier'])if(canCommand(b,side,id))return battleCommand(b,side,id);return null;}
+export function canCommand(b,side,id){
+ const c=b?.control[side],cmd=COMMANDS.find(x=>x.id===id);
+ if(!c||!cmd||b.done||c.energy<cmd.cost||!b.fighters[side].some(f=>f.hp>0))return false;
+ if(id==='counter')return underClimax(b,side);
+ return c.turns-c.commandAt>=3&&(id!=='overdrive'||!c.overdrive)&&(id!=='rally'||b.fighters[side].some(f=>f.hp>0&&f.hp<f.maxHp))&&(id!=='barrier'||b.fighters[side].some(f=>f.hp>0&&f.shield<60));
+}
+export function battleCommand(b,side,id){if(!canCommand(b,side,id))return null;const cmd=COMMANDS.find(x=>x.id===id),c=b.control[side];c.energy-=cmd.cost;if(id!=='counter')c.commandAt=c.turns;else b.pendingClimax.interrupted=true;const affected=b.fighters[side].filter(f=>f.hp>0);let amount=0;if(id==='overdrive')c.overdrive=3;if(id==='barrier')affected.forEach(f=>{amount+=grantShield(f,22);});if(id==='rally')affected.forEach(f=>{const n=Math.min(20,f.maxHp-f.hp);f.hp+=n;amount+=n;});const event={id,side,name:cmd.name,round:b.round,amount,index:b.commands.length};b.commands.push(event);return event;}
+export function botBattleCommand(b,side=1){if(underClimax(b,side)){if(canCommand(b,side,'counter'))return battleCommand(b,side,'counter');setTactic(b,side,'guard');return canCommand(b,side,'barrier')?battleCommand(b,side,'barrier'):null;}
+ const fs=b.fighters[side],ratio=fs.reduce((n,f)=>n+f.hp,0)/fs.reduce((n,f)=>n+f.maxHp,0);for(const id of ratio<.55?['rally','barrier','overdrive']:['overdrive','barrier'])if(canCommand(b,side,id))return battleCommand(b,side,id);return null;}
 
-export function upcomingTurns(b,limit=5){return b&&!b.done?b.queue.filter(f=>f.hp>0).slice(0,Math.max(0,limit)).map(f=>({id:f.id,side:f.side,special:(f.actions+1)%3===0})):[];}
+export function upcomingTurns(b,limit=5){return b&&!b.done?[...(b.pendingClimax?[b.fighters[b.pendingClimax.side].find(f=>f.id===b.pendingClimax.attacker)].filter(Boolean):[]),...b.queue].filter(f=>f.hp>0).slice(0,Math.max(0,limit)).map(f=>({id:f.id,side:f.side,special:f.id===b.pendingClimax?.attacker||(f.actions+1)%3===0})):[];}

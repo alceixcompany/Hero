@@ -1,3 +1,4 @@
+import {battleDelay} from './dist/combat-choreography.mjs';
 import {validPlan,resolvedPlan} from './dist/strategy.mjs';
 import {randomBytes,createHash,randomInt} from 'node:crypto';
 import {mkdirSync,readFileSync,writeFileSync,renameSync,chmodSync} from 'node:fs';
@@ -121,6 +122,7 @@ export class RoomStore{
     if(data.plan!==undefined&&!validPlan(r.game.players[side].team,data.plan))fail('Diziliş geçersiz.');r.game.plans??=[null,null];r.game.plans[side]=resolvedPlan(r.game.players[side].team,data.plan??r.game.plans[side],hero);r.slots[side].ready=true;if(r.slots.every(s=>s.ready))this.startBattle(r);
    }else if(['command','tactic','focus'].includes(action)){
     if(r.status!=='battle'||r.battle.done||r.pauseUntil)fail('Aktif mücadele bekleniyor.');
+    if(r.battle.pendingClimax&&r.deadline&&this.now()>=r.deadline){this.tick();fail('Zirve hazırlığının süresi doldu.','expired');}
     const ok=action==='command'?battleCommand(r.battle,side,data.id):action==='tactic'?setTactic(r.battle,side,data.id):focusTarget(r.battle,side,data.id??null);
     if(!ok)fail('Bu hamle şu anda kullanılamıyor.');
    }else if(action==='pause'){
@@ -129,7 +131,7 @@ export class RoomStore{
     else{if(r.pauseUsed[side]>=3)fail('Bu mücadelede üç taktik molanı kullandın.');r.pauseUsed[side]++;r.remaining=Math.max(1000,r.deadline-this.now());r.deadline=0;r.pauseUntil=this.now()+30000;r.notice=r.slots[side].name+' taktik molası aldı. 30 saniyede otomatik devam eder.';}
    }else if(action==='speed'){
     if(side!==0||r.status!=='battle'||![1,2,4].includes(data.speed))fail('Oynatma hızını oda sahibi seçer.');
-    const old=r.speed;r.speed=data.speed;if(r.deadline)r.deadline=this.now()+Math.max(700,(r.deadline-this.now())*old/r.speed);r.remaining=Math.max(700,r.remaining*old/r.speed);
+    const old=r.speed;r.speed=data.speed;if(!r.battle.pendingClimax){if(r.deadline)r.deadline=this.now()+Math.max(700,(r.deadline-this.now())*old/r.speed);r.remaining=Math.max(700,r.remaining*old/r.speed);}
    }else fail('İşlem bu aşamada kullanılamıyor.');
   }
   r.receipts[side].push(id);r.receipts[side]=r.receipts[side].slice(-100);this.change(r);return {ok:true};
@@ -160,7 +162,7 @@ export class RoomStore{
    if(r.pauseUntil){if(now>=r.pauseUntil){r.pauseUntil=0;r.deadline=now+Math.max(1000,r.remaining);r.notice='Taktik molası bitti.';this.change(r);}continue;}
    if(!r.deadline||now<r.deadline)continue;
    if(r.status==='auction'){this.auctionPass(r,true);this.change(r);}
-   else if(r.status==='battle'&&!r.battle.done){battleStep(r.battle);r.deadline=r.battle.done?0:now+3600/r.speed;r.remaining=3600/r.speed;if(r.battle.done){r.playing=false;r.resultAt=now+1800/r.speed;r.notice='Mücadele tamamlandı. Rövanş için iki oyuncu da onay vermeli.';}this.change(r);}
+   else if(r.status==='battle'&&!r.battle.done){const event=battleStep(r.battle),delay=battleDelay(event,r.speed);r.deadline=r.battle.done?0:now+delay;r.remaining=delay;if(r.battle.done){r.playing=false;r.resultAt=now+1800/r.speed;r.notice='Mücadele tamamlandı. Rövanş için iki oyuncu da onay vermeli.';}this.change(r);}
   }
   if(removed)this.persist();
  }

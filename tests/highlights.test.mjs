@@ -31,7 +31,7 @@ test('mixed shield sources persist and old battle shields remain unattributed',(
  delete c.metrics;assert.equal(metrics(c).damage,0);
 });
 test('battle highlights never consume randomness, prefer decisive KOs and survive a JSON roundtrip',()=>{
- const {b}=setup([['thor'],['widow','rocket']]);const [thor,widow]=b.fighters.flat();widow.hp=1;strike(b,thor);while(!b.done)battleStep(b);
+ const {b}=setup([['thor'],['widow','rocket']]);const [thor,widow]=b.fighters.flat();widow.hp=1;b.control[0].focus='widow';strike(b,thor);while(!b.done)battleStep(b);
  b.rng=()=>{throw Error('results must not consume RNG');};const summary=battleHighlights(b),restored=JSON.parse(JSON.stringify(b));assert.deepEqual(battleHighlights(restored),JSON.parse(JSON.stringify(summary)));assert.equal(summary.turning.defeated.length,1);assert.ok(summary.damage.damage>0);
 });
 test('turning point ranks winner eliminations first, then actual damage, without favoring a losing-side spectacle',()=>{

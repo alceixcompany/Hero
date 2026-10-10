@@ -1,3 +1,4 @@
+import {healthBehaviour,sequenceClip} from './battle-presentation.mjs';
 import {signatureFor,signaturePose} from './hero-signatures.mjs';
 import {meleeClip} from './combat-choreography.mjs';
 import * as THREE from './vendor/three.module.js';
@@ -184,18 +185,22 @@ export async function loadCharacter(id,{getAsset=asset}={}){
  pose(p.gear==='chair'?'Sitting_Idle_Loop':'Idle_Loop',0,0);
  return {object:visual,profile:p,bones,clipNames:clips.map(c=>c.name),...attachments,
   reset(){restoreOverlays();eliminated=false;deathTime=0;exchange=null;idle=0;walkTime=0;current=null;pose(p.gear==='chair'?'Sitting_Idle_Loop':'Idle_Loop',0,0);},
-  update({dt,playing=true,moving=0,flight=false,event=null,role=null,progress=1,dead=false,reduced=false,traveling=false,encounter=null,victory=false,victoryProgress=0}){
-   restoreOverlays();eliminated||=dead;if(playing&&!eliminated){idle+=dt;walkTime+=dt*signature.cadence*clamp(moving/.85,.08,1.4);}let name=p.gear==='chair'?'Sitting_Idle_Loop':moving>.08&&!flight?'Walk_Loop':'Idle_Loop',t=(name==='Walk_Loop'?walkTime:idle)%(actions.get(name)?.getClip().duration??2.5);
+  update({dt,playing=true,moving=0,flight=false,event=null,role=null,progress=1,dead=false,reduced=false,traveling=false,encounter=null,victory=false,victoryProgress=0,health=1}){
+   restoreOverlays();eliminated||=dead;if(playing&&!eliminated){idle+=dt;walkTime+=dt*signature.cadence*(id==='hulk'?1+healthBehaviour(id,health).rage*.2:1-healthBehaviour(id,health).fatigue*.18)*clamp(moving/.85,.08,1.4);}let name=p.gear==='chair'?'Sitting_Idle_Loop':moving>.08&&!flight?'Walk_Loop':'Idle_Loop',t=(name==='Walk_Loop'?walkTime:idle)%(actions.get(name)?.getClip().duration??2.5);
    if(eliminated){deathTime+=playing||progress>=1?dt:0;name='Death01';t=Math.min(deathTime,actions.get(name).getClip().duration-.001);}
    else if(event&&role&&progress<1){
     if(exchange!==event){exchange=event;deathTime=0;}
     if(role==='attacker'){name=p.gear==='chair'?'Spell_Simple_Shoot':event.special&&['sorcerer','witch','storm','magnet','vision','horns','phoenix'].includes(p.gear)?'Spell_Simple_Shoot':p.attack;if(['Punch_Jab','Punch_Cross'].includes(name)&&event.round%2===0)name=name==='Punch_Jab'?'Punch_Cross':'Punch_Jab';t=progress*actions.get(name).getClip().duration;if(encounter==='brawl'||encounter==='blade'){const clip=meleeClip(progress,encounter,id);name=clip.name;t=clip.phase*actions.get(name).getClip().duration;}if(traveling&&progress>.15&&progress<.28&&!flight){name='Jog_Fwd_Loop';t=progress*4*signature.cadence%actions.get(name).getClip().duration;}}
     else if(progress>.48){name=event.dodge&&p.gear!=='chair'?'Roll':'Hit_Chest';t=clamp((progress-.48)/.52)*actions.get(name).getClip().duration;}else if(['brawl','blade'].includes(encounter)&&progress>.28){name=p.gear==='chair'?'Sitting_Idle_Loop':'Punch_Jab';t=clamp((progress-.28)/.2)*.22;}
    }
+   let defending=false;
+   if(!eliminated&&event?.type==='charge'&&role==='attacker'){name=p.gear==='hammer'?'Sword_Attack':'Spell_Simple_Idle_Loop';t=.12*actions.get(name).getClip().duration;}
+   else if(!eliminated&&event?.sequence&&role&&progress<1){const clip=sequenceClip(progress,role,id,event.dodge);name=p.gear==='chair'?'Sitting_Idle_Loop':clip.name;t=clip.phase*actions.get(name).getClip().duration;defending=clip.block;}
    if(victory&&!eliminated){name=p.gear==='chair'?'Sitting_Idle_Loop':['sorcerer','witch','phoenix','magnet','horns'].includes(p.gear)?'Spell_Simple_Idle_Loop':'Idle_Loop';t=idle%actions.get(name).getClip().duration;}
    pose(name,t,dt);
-   if(!eliminated&&!victory){for(const [key,axis,angle] of signaturePose(id,{time:idle,moving,flight,role,progress,special:event?.special,reduced})){const bone=bones.get(key);if(bone){overlays.push({bone,quaternion:bone.quaternion.clone()});if(axis==='x')bone.rotateX(angle);else if(axis==='y')bone.rotateY(angle);else bone.rotateZ(angle);}}}
-   if(!eliminated&&role==='target'&&['brawl','blade'].includes(encounter)&&progress>.25&&progress<.48){const weight=Math.sin(clamp((progress-.25)/.23)*Math.PI);for(const key of ['upperarm_l','upperarm_r','lowerarm_l','lowerarm_r']){const bone=bones.get(key);if(bone){overlays.push({bone,quaternion:bone.quaternion.clone()});bone.rotateX(-weight*(key.startsWith('lower')?.8:.5));}}}
+   if(!eliminated&&!victory){for(const [key,axis,angle] of signaturePose(id,{time:idle,moving,flight,role,progress:event?.type==='charge'?.2:progress,special:event?.special||event?.type==='charge',reduced,health})){const bone=bones.get(key);if(bone){overlays.push({bone,quaternion:bone.quaternion.clone()});if(axis==='x')bone.rotateX(angle);else if(axis==='y')bone.rotateY(angle);else bone.rotateZ(angle);}}}
+   if(defending&&!eliminated){for(const key of ['upperarm_l','upperarm_r','lowerarm_l','lowerarm_r']){const bone=bones.get(key);if(bone){overlays.push({bone,quaternion:bone.quaternion.clone()});bone.rotateX(key.startsWith('lower')?-.9:-.65);}}}
+   if(!eliminated&&!event?.sequence&&role==='target'&&['brawl','blade'].includes(encounter)&&progress>.25&&progress<.48){const weight=Math.sin(clamp((progress-.25)/.23)*Math.PI);for(const key of ['upperarm_l','upperarm_r','lowerarm_l','lowerarm_r']){const bone=bones.get(key);if(bone){overlays.push({bone,quaternion:bone.quaternion.clone()});bone.rotateX(-weight*(key.startsWith('lower')?.8:.5));}}}
    if(victory&&!eliminated){const amount=clamp(victoryProgress),magic=['sorcerer','witch','phoenix','magnet','horns','chair'].includes(p.gear);const left=p.gear==='shield',double=magic||['hulk','claws','tree'].includes(p.gear),arm=magic?-.6:['sword','katanas'].includes(p.gear)?-.8:-1.25;const stance=[[left?'upperarm_l':'upperarm_r',arm],[left?'lowerarm_l':'lowerarm_r',-.35],['spine_03',-.09],['Head',-.05]];if(double)stance.push(['upperarm_l',arm],['lowerarm_l',-.35]);for(const [key,angle] of stance){const bone=bones.get(key);if(bone){overlays.push({bone,quaternion:bone.quaternion.clone()});bone.rotateX(angle*amount);}}}
    if(flight&&!eliminated&&!(event&&role&&progress<1)&&p.gear!=='chair'){
     for(const [name,angle] of [['spine_03',.09],['thigh_l',.15],['thigh_r',.22],['calf_l',.22],['calf_r',.29]]){const bone=bones.get(name);overlays.push({bone,quaternion:bone.quaternion.clone()});bone.rotateX(angle);}
