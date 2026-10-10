@@ -55,3 +55,6 @@ body.arena-immersive{overflow:hidden}.cinema-arena.is-immersive{position:fixed;i
 /* Keep persistent cover status outside the attack caption and camera controls. */
 .cinema-arena:has(.quick-command-dock) .cover-status{bottom:5px;font-size:8px;line-height:1.3;padding:3px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:700px){.cinema-arena:has(.quick-command-dock) .cover-status{bottom:80px;width:calc(100% - 24px);font-size:7px;letter-spacing:0}}
+
+/* Camera choices remain reachable on small screens. */
+.arena-camera-controls{max-width:calc(100% - 26px);flex-wrap:wrap}.arena-camera-controls button,.arena-camera-controls .scene-speeds{flex-shrink:0}

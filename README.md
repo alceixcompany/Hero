@@ -21,6 +21,8 @@ Tarayıcı: http://127.0.0.1:5173. Motor testleri: `npm test`.
 - Ayarlanabilir %0–25 kritik şansı ve aynı oranda hasar sapması. %0'da kaçış devam eder.
 - Can, kalkan, kritik, kaçış, alan hasarı, iyileştirme; her 3. saldırıda özel yetenek.
 - Savaş oynatımı: duraklat, tek hamle, 1× / 2× / 4× hız, günlük ve rövanş.
+- Yakın dövüşçüler hedef çevresinde boş yaklaşma noktaları seçer; kavisli yollar ve gövde boyutuna göre aralıklar kalabalığı azaltır. İkili saldırı ve koruyucu da ayrı konum kullanır. Bu görsel hareketler hasar hesabını veya taktik dizilişi değiştirmez.
+- Sinema kamerası kahramanların birbirini kapatmasını değerlendirir; belirgin iyileşme varsa en az 8 saniye arayla yumuşak açı değiştirir. Çapraz ve üstten kamera elle seçilebilir; final düellosu bu iki seçimi korur.
 - Açık artırma ilerlemesi bu tarayıcıda localStorage ile korunur. Savaşlar bellekte çalışır; sayfa yenilemek takımları korur ve savaşı yeniden başlatmaya izin verir.
 
 ## Motor

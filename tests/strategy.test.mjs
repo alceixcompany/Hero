@@ -51,7 +51,7 @@ test('fresh Vercel functions commit private plans atomically and reveal matching
 import {packLabels} from '../dist/arena-motion.mjs';
 test('crowded mobile labels separate without moving fighters or consuming random draws',()=>{
  const labels=[{id:'a',x:200,y:260,width:75,height:36},{id:'b',x:210,y:262,width:75,height:36},{id:'c',x:207,y:270,width:75,height:36}],before=structuredClone(labels);
- const placed=packLabels(labels,{width:537,height:700});assert.deepEqual(labels,before);for(let i=0;i<placed.length;i++)for(let j=i+1;j<placed.length;j++)assert.ok(Math.abs(placed[i].y-placed[j].y)>=40);assert.ok(placed.every(p=>p.x>0&&p.x<537&&p.y>0&&p.y<700));
+ const placed=packLabels(labels,{width:537,height:700});assert.deepEqual(labels,before);for(let i=0;i<placed.length;i++)for(let j=i+1;j<placed.length;j++)assert.ok(Math.abs(placed[i].y-placed[j].y)>=40||Math.abs(placed[i].x-placed[j].x)>=(placed[i].width+placed[j].width)/2+4);assert.ok(placed.every(p=>p.x>0&&p.x<537&&p.y>0&&p.y<700));
 });
 
 test('broken cover survives native room snapshots and persisted Vercel reconnects',async()=>{

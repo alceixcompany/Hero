@@ -9,8 +9,8 @@ import {reflectionEnvironment,contactTexture,contactShadow,scenicDetails} from '
 import {positionFor,resolvedPlan,ROLES,zoneOf} from './strategy.mjs';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/addons/loaders/GLTFLoader.js';
-import {CameraRig,cameraGoal} from './camera-rig.mjs';
-import {advanceExchange,retimeExchange,exchangeMotion,avoidCrowding,packLabels,smoothStep} from './arena-motion.mjs';
+import {CameraRig,cameraGoal,ShotDirector} from './camera-rig.mjs';
+import {advanceExchange,retimeExchange,exchangeMotion,avoidCrowding,planApproach,approachPoint,packLabels,smoothStep} from './arena-motion.mjs';
 import {hero} from './engine.mjs';
 import {loadCharacter} from './character-models.mjs';
 import {profileFor} from './character-profiles.mjs';
@@ -19,6 +19,7 @@ import {syncFighterLife,shouldFall} from './fighter-life.mjs';
 import {addAtmosphere} from './arena-atmosphere.mjs';
 import {architecturalScenery,bevelBox} from './arena-scenery.mjs';
 
+const footprint=a=>({id:a.id,x:a.position.x,z:a.position.z,radius:a.radius,alive:!a.eliminated});
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const SUITS={
@@ -67,19 +68,19 @@ function makeActor(h,side){
  const shield=sphere(group,1.5,new THREE.MeshBasicMaterial({color:'#8ca9ff',transparent:true,opacity:.065,side:THREE.FrontSide,depthWrite:false}),0,1.15,0,.57,.92,.57);shield.visible=false;
  const jets=[];if(['ironman','warmachine','marvel'].includes(h.id)){legs.forEach(l=>{const jet=mesh(l.knee,new THREE.ConeGeometry(.08,.65,12),new THREE.MeshBasicMaterial({color:'#9eefff',transparent:true,opacity:.65,blending:THREE.AdditiveBlending,depthWrite:false}),0,-.82,.04);jet.rotation.z=Math.PI;jets.push(jet);});}
  const trailGeo=new THREE.BufferGeometry().setFromPoints(Array.from({length:12},()=>V()));const trail=new THREE.Line(trailGeo,new THREE.LineBasicMaterial({color:h.color,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
- return {id:h.id,side,group,rig,arms,legs,cape,wings,jets,trail,trailPoints:[],flight:h.flight,altitude:h.flight?1.25+(h.index%3)*.28:0,lift:0,position:V(),goal:V(),phase:h.index*.71,shield,scale,hp:1,maxHp:1,dead:0,home:V(),yaw:side===0?1.03:-1.03,label:null};
+ return {id:h.id,radius:.64*profileFor(h.id).width*(profileFor(h.id).height/2.4),side,group,rig,arms,legs,cape,wings,jets,trail,trailPoints:[],flight:h.flight,altitude:h.flight?1.25+(h.index%3)*.28:0,lift:0,position:V(),goal:V(),phase:h.index*.71,shield,scale,hp:1,maxHp:1,dead:0,home:V(),yaw:side===0?1.03:-1.03,label:null};
 }
 
 export class Arena3D{
  constructor({onImpact=()=>{},onAttack=()=>{},onDuel=()=>{},onExchangeBeat=()=>{}}={}){
-  this.onExchangeBeat=onExchangeBeat;this.onDuel=onDuel;this.onImpact=onImpact;this.onAttack=onAttack;this.actors=new Map();this.effects=new THREE.Group();this.time=0;this.viewTime=0;this.impactEnergy=0;this.frame=0;this.lastEvent=null;this.action=null;this.cameraMode='follow';this.cameraRig=new CameraRig();this.shotFocus=null;this.readyCache=new Map();this.assetJobs=new Map();this.loader=new GLTFLoader();this.pulses=[];this.reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  this.onExchangeBeat=onExchangeBeat;this.onDuel=onDuel;this.onImpact=onImpact;this.onAttack=onAttack;this.actors=new Map();this.effects=new THREE.Group();this.time=0;this.viewTime=0;this.impactEnergy=0;this.frame=0;this.lastEvent=null;this.action=null;this.cameraMode='follow';this.cameraRig=new CameraRig();this.shotDirector=new ShotDirector();this.shotFocus=null;this.readyCache=new Map();this.assetJobs=new Map();this.loader=new GLTFLoader();this.pulses=[];this.reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.18;this.renderer.domElement.setAttribute('aria-hidden','true');
   this.scene=new THREE.Scene();this.reflections=reflectionEnvironment(this.renderer);this.scene.environment=this.reflections.texture;this.scene.environmentIntensity=.38;this.contactMap=contactTexture();this.camera=new THREE.PerspectiveCamera(40,1,.1,150);this.environment=new THREE.Group();this.units=new THREE.Group();this.scene.add(this.environment,this.units,this.effects);
   this.resizeObserver=new ResizeObserver(()=>this.resize());
   const glow=document.createElement('canvas');glow.width=glow.height=64;const c=glow.getContext('2d'),gradient=c.createRadialGradient(32,32,0,32,32,32);gradient.addColorStop(0,'#fff');gradient.addColorStop(.12,'#ffffffdd');gradient.addColorStop(.4,'#ffffff66');gradient.addColorStop(1,'#ffffff00');c.fillStyle=gradient;c.fillRect(0,0,64,64);this.glow=new THREE.CanvasTexture(glow);
  }
  mount(host,labels,hitLabel,game,battle,event,speed,playing=false,restoring=false,windupRemaining=null){
-  this.host=host;host.parentElement.dataset.camera=game.camera||'follow';this.labels=labels;this.hitLabel=hitLabel;this.cameraMode=game.camera||'follow';this.playing=playing;this.battle=battle;if(this.currentBattle!==battle){this.duel=null;this.lastDuel=null;this.climaxFx?.dispose();this.climaxFx=null;this.onDuel(false);}if(speed!==this.speed)retimeExchange(this.action,speed,this.reduced);this.speed=speed;this.commandFlash=host.parentElement.querySelector('#arena-command-flash');if(this.renderer.domElement.parentElement!==host){host.appendChild(this.renderer.domElement);this.resizeObserver.disconnect();this.resizeObserver.observe(host);}
+  this.host=host;host.parentElement.dataset.camera=game.camera||'follow';this.labels=labels;this.hitLabel=hitLabel;this.cameraMode=game.camera||'follow';this.playing=playing;this.battle=battle;if(this.currentBattle!==battle){this.shotDirector=new ShotDirector();this.duel=null;this.lastDuel=null;this.climaxFx?.dispose();this.climaxFx=null;this.onDuel(false);}if(speed!==this.speed)retimeExchange(this.action,speed,this.reduced);this.speed=speed;this.commandFlash=host.parentElement.querySelector('#arena-command-flash');if(this.renderer.domElement.parentElement!==host){host.appendChild(this.renderer.domElement);this.resizeObserver.disconnect();this.resizeObserver.observe(host);}
   const formations=game.players.map((p,side)=>battle?.fighters[side]||resolvedPlan(p.team,game.plans?.[side],hero));const key=game.arena+'|'+game.players.flatMap(p=>p.team).join(',')+'|'+formations.flat().map(p=>p.id+':'+p.slot).join(',');if(key!==this.key){labels.replaceChildren();this.buildEnvironment(game.arena);this.actors.forEach(a=>{a.wear?.dispose();a.model?.dispose();});dispose(this.units);this.actors.clear();game.players.forEach((p,side)=>p.team.forEach((id,i)=>{const actor=makeActor(hero(id),side),n=p.team.length;const placement=formations[side].find(p=>p.id===id);actor.slot=placement.slot;actor.role=placement.role;actor.home.fromArray(positionFor(actor.slot,side));actor.position.copy(actor.home);actor.goal.copy(actor.home);actor.group.position.copy(actor.home);actor.contact=contactShadow(actor.group,this.contactMap);actor.rig.rotation.y=actor.yaw;this.units.add(actor.group,actor.trail);actor.anchor=actor.home.clone();actor.wear=createBattleWear(actor,this.glow);this.actors.set(id,actor);this.loadActorModel(actor);}));this.key=key;this.lastEvent=null;this.clearEffects();this.action=null;this.shotFocus=null;}
   this.game=game;this.actors.forEach(actor=>{
    const f=battle?.fighters[actor.side].find(f=>f.id===actor.id),waiting=!restoring&&this.currentBattle===battle&&(event&&event!==this.lastEvent||this.action?.event===event&&!this.action.impacted);actor.displayHp=waiting?(actor.displayHp??actor.hp):(f?.hp??1);actor.pendingHp=f?.hp??1;actor.role=f?.role||formations[actor.side].find(p=>p.id===actor.id).role;syncFighterLife(actor,f?.hp??1,restoring?null:event,this.currentBattle!==battle);actor.maxHp=f?.maxHp??1;actor.shield.visible=!actor.eliminated&&(f?.shield??0)>0;
@@ -212,18 +213,18 @@ const rail=material('#536372',.6,.4);for(const z of [-6,6]){box(env,19,.08,.08,r
  }
  animate(event,speed){
   this.clearEffects();const attacker=this.actors.get(event.attacker),target=this.actors.get(event.target);if(!attacker||!target)return;
-  const h=hero(event.attacker),encounter=encounterFor(h,event);const ranged=h.combat==='ranged'||event.special&&['captain','spiderman'].includes(h.id);const from=attacker.position.clone(),aim=target.position.clone(),direction=aim.clone().sub(from).normalize();const approach=aim.clone().addScaledVector(direction,-1.3);approach.x=clamp(approach.x,-7.8,7.8);approach.z=clamp(approach.z,-5,5);this.action={event,attacker,target,from,aim,approach,direction,finishWhilePaused:!this.playing,elapsed:0,start:this.time,duration:exchangeDuration(speed,this.reduced,event.finisher,event),reduced:this.reduced,encounter,ranged,impacted:false};
+  const h=hero(event.attacker),encounter=encounterFor(h,event);const ranged=h.combat==='ranged'||event.special&&['captain','spiderman'].includes(h.id);const from=attacker.position.clone(),aim=target.position.clone(),route=planApproach(footprint(attacker),footprint(target),[...this.actors.values()].map(footprint)),approach=V(route.x,from.y,route.z),direction=aim.clone().sub(ranged&&encounter!=='aerial'?from:approach).normalize();this.action={event,attacker,target,from,aim,approach,route,direction,finishWhilePaused:!this.playing,elapsed:0,start:this.time,duration:exchangeDuration(speed,this.reduced,event.finisher,event),reduced:this.reduced,encounter,ranged,impacted:false};
   this.action.beatsPlayed=new Set();
   if(event.climax){
    if(!this.climaxFx||this.climaxActor!==event.attacker){this.climaxFx?.dispose();this.climaxFx=climaxEffects(this.environment,{kind:event.climax.kind,color:event.climax.color,glow:this.glow,reduced:this.reduced});this.climaxActor=event.attacker;}
   }
   if(event.type==='charge'){this.onAttack(event);this.hitLabel.style.opacity=0;return;}
-  if(event.guard){const guardian=this.actors.get(event.guard.id);if(guardian){this.action.guardian=guardian;this.action.guardFrom=guardian.position.clone();const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(),V()]),new THREE.LineBasicMaterial({color:'#a1dbff',transparent:true,opacity:.85,blending:THREE.AdditiveBlending,depthWrite:false}));this.effects.add(line);this.action.guardLine=line;}}
+  if(event.guard){const guardian=this.actors.get(event.guard.id);if(guardian){this.action.guardian=guardian;this.action.guardFrom=guardian.position.clone();this.action.guardRoute=planApproach(footprint(guardian),footprint(target),[...this.actors.values()].filter(o=>o!==attacker).map(footprint).concat({id:attacker.id,x:approach.x,z:approach.z,radius:attacker.radius,alive:true}));const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(),V()]),new THREE.LineBasicMaterial({color:'#a1dbff',transparent:true,opacity:.85,blending:THREE.AdditiveBlending,depthWrite:false}));this.effects.add(line);this.action.guardLine=line;}}
   this.onAttack(event);
   if(event.combo){
    const partner=this.actors.get(event.combo.partner);
    if(partner&&!partner.eliminated){
-    this.action.partner=partner;this.action.partnerFrom=partner.position.clone();
+    this.action.partner=partner;this.action.partnerFrom=partner.position.clone();const reserved={id:attacker.id,x:approach.x,z:approach.z,radius:attacker.radius,alive:true};this.action.partnerRoute=planApproach(footprint(partner),footprint(target),[...this.actors.values()].filter(o=>o!==attacker).map(footprint).concat(reserved));
     const beam=new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(),V()]),new THREE.LineBasicMaterial({color:event.combo.color,transparent:true,opacity:.8,blending:THREE.AdditiveBlending,depthWrite:false}));beam.visible=false;this.effects.add(beam);this.action.partnerBeam=beam;
     for(const member of [attacker,partner]){const aura=ring(this.environment,.6,.035,event.combo.color,member.position.x,.08,member.position.z);this.pulses.push({mesh:aura,start:this.time,actor:member});}
    }
@@ -244,11 +245,17 @@ const rail=material('#536372',.6,.4);for(const z of [-6,6]){box(env,19,.08,.08,r
   this.frame=0;if(!this.host?.isConnected)return;
   const dt=Math.max(0,Math.min((now-this.prev)/1000,.04));this.prev=now;this.time+=dt;if(this.playing||!this.battle)this.viewTime+=dt;this.atmosphere?.update(dt,this.playing||!this.battle,this.reduced);this.impactEnergy*=Math.exp(-dt*(this.action?.event.finisher?4:9));if(this.impactLight)this.impactLight.intensity=this.impactEnergy;const action=this.action,p=advanceExchange(action,dt,this.playing);this.host.parentElement.dataset.finishing=String(!!action?.event.finisher&&p<1);const celebrating=this.battle?.done&&this.battle.winner!==null&&(!action||p>.82);this.victoryTime=celebrating?(this.victoryTime||0)+dt:0;const visualDt=action?.event.finisher&&!this.reduced&&Math.abs(p-impactAt(action.event))<.12?dt*.4:dt;
   // Continuous repositioning uses visual time only; it never changes the seeded combat calculation.
+  const spacing=[...this.actors.values()].map(footprint);
+  if(action&&p<1&&action.event.type!=='charge'){
+   if(!action.ranged||action.encounter==='aerial')spacing.push({id:action.attacker.id,x:action.approach.x,z:action.approach.z,radius:action.attacker.radius+.15,alive:true});
+   if(action.partnerRoute&&hero(action.partner.id).combat==='melee')spacing.push({id:action.partner.id,x:action.partnerRoute.x,z:action.partnerRoute.z,radius:action.partner.radius,alive:true});
+   if(action.guardRoute)spacing.push({id:action.guardian.id,x:action.guardRoute.x,z:action.guardRoute.z,radius:action.guardian.radius,alive:true});
+  }
   this.actors.forEach(a=>{
    const condition=healthBehaviour(a.id,a.displayHp/Math.max(1,a.maxHp));
    const h=hero(a.id),alive=!a.eliminated&&a.hp>0,visualAlive=alive||a.eliminated&&!shouldFall(a,action,p),active=action&&(a===action.attacker||a===action.target||a===action.partner||a===action.guardian),phase=this.time*(a.flight?.65:.35)+a.phase;
    if(this.playing&&alive&&!active&&!this.reduced){a.goal.set(clamp(a.anchor.x+Math.cos(phase)*.1,-7.7,7.7),a.home.y,clamp(a.anchor.z+Math.sin(phase)*.1,-4.6,4.6));}
-   const before=a.position.clone();if(this.playing&&!active&&alive){a.position.lerp(a.goal,1-Math.exp(-dt*(a.flight?.55:.4)));const [x,z]=avoidCrowding([a.position.x,a.position.z],[...this.actors.values()].map(o=>({id:o.id,x:o.position.x,z:o.position.z,alive:!o.eliminated})),a.id,dt);a.position.x=x;a.position.z=z;}a.group.position.copy(a.position);
+   const before=a.position.clone();if(this.playing&&!active&&alive){a.position.lerp(a.goal,1-Math.exp(-dt*(a.flight?.55:.4)));const [x,z]=avoidCrowding([a.position.x,a.position.z],spacing,a.id,dt,a.radius);a.anchor.x+=x-a.position.x;a.anchor.z+=z-a.position.z;a.position.x=x;a.position.z=z;}a.group.position.copy(a.position);
    const moving=before.distanceTo(a.position)/Math.max(.001,dt),foes=[...this.actors.values()].filter(o=>o.side!==a.side&&o.hp>0),foe=foes.reduce((n,o)=>!n||o.position.distanceTo(a.position)<n.position.distanceTo(a.position)?o:n,null);
    const yaw=foe?Math.atan2(foe.position.x-a.position.x,foe.position.z-a.position.z):a.yaw;const delta=Math.atan2(Math.sin(yaw-a.rig.rotation.y),Math.cos(yaw-a.rig.rotation.y));if(alive){a.rig.rotation.y+=delta*Math.min(1,dt*5);a.rig.rotation.x=0;a.rig.rotation.z=0;}
    a.lift+=((visualAlive?a.altitude:0)-a.lift)*(1-Math.exp(-dt*3));if(a.id==='antman')a.rig.scale.setScalar(a.scale);const hover=a.flight&&visualAlive&&!this.reduced?Math.sin(this.time*2.2+a.phase)*(.11-condition.landing*.2):0;
@@ -270,7 +277,7 @@ const rail=material('#536372',.6,.4);for(const z of [-6,6]){box(env,19,.08,.08,r
   });
   const narrow=this.camera.aspect<1.25;
   this.updateDuel();this.reactions?.update(dt,this.playing||!!this.action?.finishWhilePaused||!this.battle);
-  const goal=cameraGoal(this.cameraMode,this.camera.aspect,this.reduced?null:this.shotFocus,{time:this.viewTime,reduced:this.reduced,duel:this.duel||(this.battle?.done?this.lastDuel:null)});
+  const goal=cameraGoal(this.cameraMode,this.camera.aspect,this.reduced?null:this.shotFocus,{time:this.viewTime,reduced:this.reduced,composition:this.shotDirector.update([...this.actors.values()].filter(a=>!a.eliminated).map(a=>({...footprint(a),height:profileFor(a.id).height+a.lift})),this.viewTime),duel:this.duel||(this.battle?.done?this.lastDuel:null)});
   const pose=this.cameraRig.update(goal,dt);
   this.camera.position.fromArray(pose.position);this.camera.lookAt(V(...pose.look));
   const charging=action?.event.type==='charge';
@@ -282,14 +289,14 @@ const rail=material('#536372',.6,.4);for(const z of [-6,6]){box(env,19,.08,.08,r
    if(partner){
     const supportingMelee=hero(partner.id).combat==='melee',start=action.partnerFrom;
     partner.rig.rotation.y=Math.atan2(aim.x-start.x,aim.z-start.z);
-    if(supportingMelee){const offset=aim.clone().sub(start).normalize().multiplyScalar(-1.65);offset.z+=partner.id===a.id?0:1;const destination=aim.clone().add(offset);destination.x=clamp(destination.x,-7.8,7.8);destination.z=clamp(destination.z,-5,5);partner.group.position.copy(start).lerp(destination,Math.sin(p*Math.PI)*.85);partner.position.copy(partner.group.position);}
+    if(supportingMelee){const route=action.partnerRoute,[x,z]=approachPoint([start.x,start.z],[route.x,route.z],Math.sin(p*Math.PI)*.85,route);partner.group.position.set(x,start.y,z);partner.position.copy(partner.group.position);}
     const beam=action.partnerBeam;beam.visible=p>.2&&p<.72;const attr=beam.geometry.attributes.position;const origin=partner.group.position.clone().add(V(0,partner.rig.position.y+1.45*partner.scale,0)),hit=aim.clone().add(V(0,t.rig.position.y+1.3*t.scale,0));attr.setXYZ(0,origin.x,origin.y,origin.z);attr.setXYZ(1,hit.x,hit.y,hit.z);attr.needsUpdate=true;beam.geometry.computeBoundingSphere();beam.material.opacity=Math.sin(clamp((p-.2)/.52)*Math.PI)*.8;
    }
-   if(action.guardian){const g=action.guardian,start=action.guardFrom,destination=aim.clone().addScaledVector(dir,-.65);destination.y=start.y;const travel=Math.sin(p*Math.PI)*.72;if(!g.fallingStarted){g.group.position.copy(start).lerp(destination,travel);g.position.copy(g.group.position);}const line=action.guardLine;line.visible=p>.15&&p<.85;const attr=line.geometry.attributes.position;const ga=g.group.position.clone().add(V(0,g.rig.position.y+1.2*g.scale,0)),ta=t.group.position.clone().add(V(0,t.rig.position.y+1.2*t.scale,0));attr.setXYZ(0,ga.x,ga.y,ga.z);attr.setXYZ(1,ta.x,ta.y,ta.z);attr.needsUpdate=true;line.geometry.computeBoundingSphere();}
+   if(action.guardian){const g=action.guardian,start=action.guardFrom,route=action.guardRoute,travel=Math.sin(p*Math.PI)*.72;if(!g.fallingStarted){const [x,z]=approachPoint([start.x,start.z],[route.x,route.z],travel,route);g.group.position.set(x,start.y,z);g.position.copy(g.group.position);}const line=action.guardLine;line.visible=p>.15&&p<.85;const attr=line.geometry.attributes.position;const ga=g.group.position.clone().add(V(0,g.rig.position.y+1.2*g.scale,0)),ta=t.group.position.clone().add(V(0,t.rig.position.y+1.2*t.scale,0));attr.setXYZ(0,ga.x,ga.y,ga.z);attr.setXYZ(1,ta.x,ta.y,ta.z);attr.needsUpdate=true;line.geometry.computeBoundingSphere();}
    const motion=e.sequence?sequenceMotion(p,{id:a.id,reduced:this.reduced,dodge:e.dodge,targetLift:t.rig.position.y}):exchangeMotion(p,{flank:e.flank,flight:a.flight,ranged:action.ranged,id:a.id,special:e.special,reduced:this.reduced,encounter:action.encounter,targetLift:t.rig.position.y});
-   a.group.position.copy(from).lerp(approach,motion.travel);a.group.position.x+=-dir.z*motion.arc;a.group.position.z+=dir.x*motion.arc;
+   const [attackX,attackZ]=approachPoint([from.x,from.z],[approach.x,approach.z],motion.travel,action.route);a.group.position.set(clamp(attackX-dir.z*motion.arc,-7.7,7.7),from.y,clamp(attackZ+dir.x*motion.arc,-4.7,4.7));
    a.rig.position.y=action.encounter==='aerial'?THREE.MathUtils.lerp(a.rig.position.y,t.rig.position.y+.3,motion.travel)+motion.lift:a.rig.position.y+motion.lift;a.rig.rotation.x=motion.bank;
-   const attackYaw=Math.atan2(dir.x,dir.z),turn=Math.atan2(Math.sin(attackYaw-a.rig.rotation.y),Math.cos(attackYaw-a.rig.rotation.y));a.rig.rotation.y+=turn*(1-Math.exp(-dt*12));
+   const attackYaw=Math.atan2(aim.x-a.group.position.x,aim.z-a.group.position.z),turn=Math.atan2(Math.sin(attackYaw-a.rig.rotation.y),Math.cos(attackYaw-a.rig.rotation.y));a.rig.rotation.y+=turn*(1-Math.exp(-dt*12));
    if(a.id==='antman'&&e.special)a.rig.scale.setScalar(a.scale*(1-.7*Math.sin(p*Math.PI)));
    a.arms[1].joint.rotation.x=-swing*1.7;a.arms[1].elbow.rotation.x=-.3+Math.sin(p*Math.PI)*.3;if(!a.flight)a.rig.rotation.x=Math.sin(p*Math.PI)*.14;
    action.charge.update(p,a,dir);
@@ -305,7 +312,7 @@ const rail=material('#536372',.6,.4);for(const z of [-6,6]){box(env,19,.08,.08,r
     if(action.wave&&!e.dodge){action.wave.visible=true;action.wave.scale.setScalar(1+q*16);action.wave.material.opacity=1-q;}
     const pos=t.group.position.clone().add(V(0,t.rig.position.y+2.9*t.scale+q*.7,0)).project(this.camera);this.hitLabel.style.left=(pos.x*.5+.5)*100+'%';this.hitLabel.style.top=(-pos.y*.5+.5)*100+'%';this.hitLabel.style.opacity=1-q;
    }
-   a.position.copy(a.group.position);t.position.copy(t.group.position);a.anchor.copy(a.position);t.anchor.copy(t.position);if(partner)partner.anchor.copy(partner.position);if(action.guardian)action.guardian.anchor.copy(action.guardian.position); // Preserve the new position after the exchange.
+   t.group.position.x=clamp(t.group.position.x,-7.7,7.7);t.group.position.z=clamp(t.group.position.z,-4.7,4.7);a.position.copy(a.group.position);t.position.copy(t.group.position);a.anchor.copy(a.position);t.anchor.copy(t.position);if(partner)partner.anchor.copy(partner.position);if(action.guardian)action.guardian.anchor.copy(action.guardian.position); // Preserve the new position after the exchange.
   }else if(action&&!charging){this.hitLabel.style.opacity=0;this.clearEffects();this.action=null;this.climaxFx?.dispose();this.climaxFx=null;}
   this.pulses=this.pulses.filter(pulse=>{const q=clamp((this.time-pulse.start)/1.1);pulse.mesh.position.x=pulse.actor.position.x;pulse.mesh.position.z=pulse.actor.position.z;pulse.mesh.scale.setScalar(1+q*4);pulse.mesh.material.opacity=1-q;if(q>=1){pulse.mesh.removeFromParent();pulse.mesh.geometry.dispose();pulse.mesh.material.dispose();return false;}return true;});
   const labelCandidates=[];
