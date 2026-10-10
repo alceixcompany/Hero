@@ -1,4 +1,5 @@
 import {impactAt} from './battle-presentation.mjs';
+import {clampArena} from './arena-layout.mjs';
 import {cinematicProgress,exchangeDuration} from './combat-choreography.mjs';
 export function advanceExchange(action,dt,playing){
  if(!action)return 1;
@@ -22,7 +23,7 @@ export function exchangeMotion(progress,{flight=false,ranged=false,id='',special
  const lift=!flight&&!ranged?Math.max(baseLift,Math.max(0,targetLift)*travel):baseLift;
  return {travel,lift,bank:diving&&!reduced?Math.sin(Math.PI*travel)*.48:flight&&!reduced?envelope*(ranged?.12:.2):0,recoil,dodge:recoil*1.05,arc:(!ranged||diving)&&!reduced?Math.sin(Math.PI*travel)*(flank?1.2:id==='spiderman'?.85:id==='hulk'?.12:.28):0};
 }
-const bounded=(x,z)=>[Math.max(-7.7,Math.min(7.7,x)),Math.max(-4.7,Math.min(4.7,z))];
+const bounded=clampArena;
 function separationAngle(a,b){const pair=[a,b].sort().join(':');let hash=0;for(const c of pair)hash=(hash*31+c.charCodeAt(0))>>>0;return (hash%360)*Math.PI/180+(a.localeCompare(b)>0?Math.PI:0);}
 export function avoidCrowding(position,others,id,dt=1/60,radius=.65){
  let pushX=0,pushZ=0;

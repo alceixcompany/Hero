@@ -8,7 +8,7 @@ test('rapidly alternating shots have bounded camera and look movement, with no p
  const rig=new CameraRig(),dt=1/60;let previous=rig.update(cameraGoal('follow',1.8),dt);
  for(let frame=0;frame<600;frame++){
   const focus=frame%2?[9,1.2,5]:[-9,1.2,-5],goal=cameraGoal('follow',1.8,focus),next=rig.update(goal,dt);
-  assert.equal(goal.position[2],18.2);assert.equal(goal.position[1],10);
+  assert.equal(goal.position[2],22.75);assert.equal(goal.position[1],12.5);
   assert.ok(distance(next.position,previous.position)<=6*dt+1e-10);
   assert.ok(distance(next.look,previous.look)<=1.2*dt+1e-10);
   previous={position:[...next.position],look:[...next.look]};

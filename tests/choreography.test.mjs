@@ -15,7 +15,7 @@ test('attackers approach, plant at contact, and return continuously without tele
 test('idle separation ignores corpses, handles coincident fighters, and respects stage bounds',()=>{
  assert.deepEqual(avoidCrowding([1,1],[{id:'dead',x:1,z:1,alive:false}],'alive'),[1,1]);
  const p=avoidCrowding([1,1],[{id:'b',x:1,z:1,alive:true}],'a');assert.ok(p.every(Number.isFinite));assert.ok(Math.hypot(p[0]-1,p[1]-1)>0);
- const edge=avoidCrowding([8,5],[{id:'b',x:8,z:5,alive:true}],'a');assert.ok(Math.abs(edge[0])<=7.7&&Math.abs(edge[1])<=4.7);
+ const edge=avoidCrowding([8,5],[{id:'b',x:8,z:5,alive:true}],'a');assert.ok(Math.abs(edge[0])<=9.625&&Math.abs(edge[1])<=5.875);
 });
 
 import {cinematicProgress,exchangeDuration,encounterFor} from '../dist/combat-choreography.mjs';

@@ -11,7 +11,7 @@ const attack=(b,id)=>{b.queue=[b.fighters.flat().find(f=>f.id===id)];return batt
 test('formation rejects missing/foreign/duplicate heroes, overlapping slots and invalid roles without coercion',()=>{
  const ids=['captain','winter'],p=defaultPlan(ids,hero);assert.ok(validPlan(ids,p));for(const invalid of [null,[],[p[0],p[0]],[p[0],{...p[1],slot:p[0].slot}],[p[0],{...p[1],id:'hulk'}],[p[0],{...p[1],slot:'3'}],[p[0],{...p[1],slot:6}],[p[0],{...p[1],role:'invincible'}]])assert.equal(validPlan(ids,invalid),false);
  for(let count=1;count<=5;count++)assert.ok(validPlan(['hulk','captain','winter','wanda','hawkeye'].slice(0,count),defaultPlan(['hulk','captain','winter','wanda','hawkeye'].slice(0,count),hero)));
- assert.equal(adjacent(0,1),true);assert.equal(adjacent(0,3),true);assert.equal(adjacent(2,3),false);assert.equal(adjacent(1,1),false);assert.deepEqual(positionFor(5,0),[-5.6,.65,3.2]);
+ assert.equal(adjacent(0,1),true);assert.equal(adjacent(0,3),true);assert.equal(adjacent(2,3),false);assert.equal(adjacent(1,1),false);assert.deepEqual(positionFor(5,0),[-7,.65,4]);
 });
 test('front line intercepts melee focus; fast and flying hunters bypass it; hunters choose weakest reachable ratio',()=>{
  const b=fixture();const [hulk,hawkeye,vision]=b.fighters[1];hulk.slot=0;hawkeye.slot=4;vision.slot=5;hawkeye.hp=300;vision.hp=600;

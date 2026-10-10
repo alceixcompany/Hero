@@ -1,3 +1,4 @@
+import {ARENA_SCALE} from './arena-layout.mjs';
 export const ROLES=[
  {id:'assault',name:'Ön safa saldır',short:'HÜCUM',desc:'Ön saftaki rakipleri baskılar. Standart saldırı gücü.'},
  {id:'hunt',name:'Zayıf rakibi avla',short:'AVCI',desc:'En düşük can oranına sahip ulaşılabilir rakibi seçer. Hız 8+ veya uçuş varsa arka safa sızar; saldırı −%8.'},
@@ -18,7 +19,7 @@ export function defaultPlan(team,lookup){
  return sorted.map((id,i)=>{const h=lookup(id);return {id,slot:slots[i],role:i===0&&team.length>1&&h.stats[3]>=8?'protect':h.stats[2]>=8?'hunt':'assault'};});
 }
 export function resolvedPlan(team,plan,lookup){return validPlan(team,plan)?plan.map(({id,slot,role})=>({id,slot,role})):defaultPlan(team,lookup);}
-export function positionFor(slot,side){return [(side===0?-1:1)*(rowOf(slot)===0?2.6:5.6),laneOf(slot)===2?.65:0,(laneOf(slot)-1)*3.2];}
+export function positionFor(slot,side){return [(side===0?-1:1)*(rowOf(slot)===0?2.6:5.6)*ARENA_SCALE,laneOf(slot)===2?.65:0,(laneOf(slot)-1)*3.2*ARENA_SCALE];}
 export function selectTarget(b,attacker,opponents,randomTarget,focus,lookup){
  if(!b.strategy)return {target:opponents.find(f=>f.id===focus)||randomTarget,screened:false,flank:false};
  const h=lookup(attacker.id),flank=attacker.role==='hunt'&&(h.flight||attacker.stats[2]>=8);

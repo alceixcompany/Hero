@@ -18,7 +18,7 @@ test('curved approach avoids a bystander on the straight path and lands at its r
  const a=actor('a',-6,0),t=actor('t',2,0),b=actor('b',-2,0),route=planApproach(a,t,[a,t,b]);
  assert.notEqual(route.arc,0);
  let min=Infinity;
- for(let i=0;i<=100;i++){const [x,z]=approachPoint([a.x,a.z],[route.x,route.z],i/100,route);min=Math.min(min,Math.hypot(x-b.x,z-b.z));assert.ok(Math.abs(x)<=7.7&&Math.abs(z)<=4.7);}
+ for(let i=0;i<=100;i++){const [x,z]=approachPoint([a.x,a.z],[route.x,route.z],i/100,route);min=Math.min(min,Math.hypot(x-b.x,z-b.z));assert.ok(Math.abs(x)<=9.625&&Math.abs(z)<=5.875);}
  assert.ok(min>1.3);assert.deepEqual(approachPoint([a.x,a.z],[route.x,route.z],1,route),[route.x,route.z]);
 });
 test('dense overlapping fighters spread in both axes with bounded speed and frame-order independence',()=>{
@@ -32,8 +32,8 @@ test('dense overlapping fighters spread in both axes with bounded speed and fram
  const still=actors[0];assert.deepEqual(avoidCrowding([still.x,still.z],[actor('b',still.x,still.z)],still.id,0),[still.x,still.z]);
 });
 test('edge approaches stay inside arena and ignore eliminated fighters',()=>{
- for(const x of [-7.7,7.7])for(const z of [-4.7,4.7]){
-  const a=actor('a',0,0,1.2),t=actor('t',x,z,1.2),route=planApproach(a,t,[a,t]);assert.ok(Math.abs(route.x)<=7.7&&Math.abs(route.z)<=4.7);assert.ok(gap(route,t)>2.7);
+ for(const x of [-9.625,9.625])for(const z of [-5.875,5.875]){
+  const a=actor('a',0,0,1.2),t=actor('t',x,z,1.2),route=planApproach(a,t,[a,t]);assert.ok(Math.abs(route.x)<=9.625&&Math.abs(route.z)<=5.875);assert.ok(gap(route,t)>2.7);
   assert.deepEqual(route,planApproach(a,t,[a,t,{...actor('dead',route.x,route.z),alive:false}]));
  }
 });

@@ -17,7 +17,7 @@ Tarayıcı: http://127.0.0.1:5173. Motor testleri: `npm test`.
 - Sırayla artan teklifler, pas ile satış, sadece kazanan teklifin tahsil edilmesi.
 - İki ilk pas satış olmadan lotu geçer. Hiç üyesi olmayan takıma açık artırma sonunda satılmamış bir karakter ücretsiz verilir.
 - Karakter arşivi, iki karakter karşılaştırması, 6 özellik ve karaktere özel yetenekler.
-- New York, Asgard, Wakanda; ilgili özelliklere %10 arena bonusu.
+- New York, Asgard, Wakanda; ilgili özelliklere %10 arena bonusu. 10 kahramana alan açmak için en ve derinlik %25 büyütülmüştür; platformlar, siperler, başlangıç dizilişleri ve kamera kadrajları birlikte genişler.
 - Ayarlanabilir %0–25 kritik şansı ve aynı oranda hasar sapması. %0'da kaçış devam eder.
 - Can, kalkan, kritik, kaçış, alan hasarı, iyileştirme; her 3. saldırıda özel yetenek.
 - Savaş oynatımı: duraklat, tek hamle, 1× / 2× / 4× hız, günlük ve rövanş.

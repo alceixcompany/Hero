@@ -1,18 +1,20 @@
+import {ARENA_SCALE} from './arena-layout.mjs';
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 
 // Shots share a fixed side of the arena. Attacks can gently bias the framing,
 // but never trigger a zoom, reverse angle, or snap back between turns.
 export function cameraGoal(mode,aspect,focus=null,{time=0,reduced=false,duel=null,composition=null}={}){
- const portrait=aspect<1.25,fit=Math.max(1,.85/Math.max(.2,aspect));
+ const portrait=aspect<1.25,fit=Math.max(1,(portrait?.98:1.45)/Math.max(.2,aspect));
  if(duel&&!reduced&&['follow','close','orbit'].includes(mode)){
-  const [x,y,z]=duel.center,span=Math.max(5,Math.min(13,duel.span)),distance=Math.max(12.5,span*1.45)*fit;
+  const [x,y,z]=duel.center,span=Math.max(5,Math.min(18,duel.span)),distance=Math.max(12.5,span*1.45)*fit;
   return {position:[x+3*fit,y+distance*.48,z+distance],look:[x,y,z]};
  }
  const close=mode==='close',orbit=mode==='orbit';
- const position=portrait?[2.2*fit,(close?17.5:19.5)*fit,(close?21:23)*fit]:[close?5.2:4.2,close?8.5:mode==='wide'?12.4:10,close?16.4:mode==='wide'?20:18.2];
+ const position=portrait?[2.2*fit,(close?17.5:19.5)*fit,(close?21:23)*fit]:[close?5.2:4.2,close?8.5:mode==='wide'?12.4:10,close?16.4:mode==='wide'?20:18.2].map(v=>v*fit);
  if(mode==='diagonal')position.splice(0,3,...[-13*fit,(portrait?19:11.5)*fit,(portrait?23:18)*fit]);
  if(mode==='overhead')position.splice(0,3,...[0,25*fit,11*fit]);
  if(mode==='follow'&&composition&&!reduced){const shot=SHOTS[composition];if(shot)position.splice(0,3,...[shot[0]*fit,(portrait?Math.max(19.5,shot[1]):shot[1])*fit,(portrait?Math.max(23,shot[2]):shot[2])*fit]);}
+ for(let i=0;i<3;i++)position[i]*=ARENA_SCALE;
  // The orbit is tied to elapsed viewing time, never to a hit or team switch.
  if(!reduced&&(mode==='follow'&&!composition||orbit)){const angle=Math.sin(time*(orbit?.075:.035))*(orbit?.38:.065),x=position[0],z=position[2];position[0]=x*Math.cos(angle)+z*Math.sin(angle);position[2]=z*Math.cos(angle)-x*Math.sin(angle);}
  const look=[0,close?1.5:1.2,-.4];
@@ -39,8 +41,8 @@ export class ShotDirector{
  update(fighters,time){
   if(!Number.isFinite(time)||time-this.checked<8)return this.shot;
   this.checked=time;if(fighters.length<3)return this.shot;
-  const current=occlusionScore(fighters,SHOTS[this.shot]);let best=this.shot,score=current;
-  for(const [id,position] of Object.entries(SHOTS)){const candidate=occlusionScore(fighters,position);if(candidate<score){best=id;score=candidate;}}
+  const scaled=position=>position.map(v=>v*ARENA_SCALE),current=occlusionScore(fighters,scaled(SHOTS[this.shot]));let best=this.shot,score=current;
+  for(const [id,position] of Object.entries(SHOTS)){const candidate=occlusionScore(fighters,scaled(position));if(candidate<score){best=id;score=candidate;}}
   if(score+.12<current*.75)this.shot=best;
   return this.shot;
  }
