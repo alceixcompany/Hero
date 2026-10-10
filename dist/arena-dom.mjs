@@ -1,5 +1,5 @@
 const key=element=>element.id||element.classList[0]||element.tagName;
-const sceneOwned=new Set(['arena-scene','arena-actor-labels','arena-hit-label','arena-command-flash']);
+const sceneOwned=new Set(['arena-scene','arena-actor-labels','arena-hit-label','arena-command-flash','arena-duel','arena-cover-status']);
 
 // Update the HUD without removing the WebGL canvas or restarting its frame loop.
 function patchScene(current,fresh){

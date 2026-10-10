@@ -1,3 +1,4 @@
+import {signatureFor,signaturePose} from './hero-signatures.mjs';
 import {meleeClip} from './combat-choreography.mjs';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/addons/loaders/GLTFLoader.js';
@@ -149,7 +150,7 @@ function adaptClips(library,model){
 }
 
 export async function loadCharacter(id,{getAsset=asset}={}){
- const p=profileFor(id);if(!p)throw Error('Unknown character '+id);
+ const p=profileFor(id),signature=signatureFor(id);if(!p)throw Error('Unknown character '+id);
  const [base,library,hair]=await Promise.all([getAsset(p.base),getAsset('combat'),p.hair?getAsset('Hair_'+(p.hair.startsWith('long')?'Long':p.hair.startsWith('buzz')?'Buzzed':'SimpleParted')):null]);
  const model=clone(base.scene),bones=new Map();model.traverse(n=>{if(n.isBone)bones.set(n.name,n);if(n.isSkinnedMesh)paintBody(n,p,id);});
  const attachments=dress(model,p,id,bones);const wingRest=attachments.wings.map(w=>w.quaternion.clone());let cloakMesh;attachments.cloak?.traverse(n=>{if(n.isMesh)cloakMesh=n;});const cloakRest=cloakMesh?.geometry.attributes.position.array.slice();
@@ -184,15 +185,16 @@ export async function loadCharacter(id,{getAsset=asset}={}){
  return {object:visual,profile:p,bones,clipNames:clips.map(c=>c.name),...attachments,
   reset(){restoreOverlays();eliminated=false;deathTime=0;exchange=null;idle=0;walkTime=0;current=null;pose(p.gear==='chair'?'Sitting_Idle_Loop':'Idle_Loop',0,0);},
   update({dt,playing=true,moving=0,flight=false,event=null,role=null,progress=1,dead=false,reduced=false,traveling=false,encounter=null,victory=false,victoryProgress=0}){
-   restoreOverlays();eliminated||=dead;if(playing&&!eliminated){idle+=dt;walkTime+=dt*clamp(moving/.85,.08,1.4);}let name=p.gear==='chair'?'Sitting_Idle_Loop':moving>.08&&!flight?'Walk_Loop':'Idle_Loop',t=(name==='Walk_Loop'?walkTime:idle)%(actions.get(name)?.getClip().duration??2.5);
+   restoreOverlays();eliminated||=dead;if(playing&&!eliminated){idle+=dt;walkTime+=dt*signature.cadence*clamp(moving/.85,.08,1.4);}let name=p.gear==='chair'?'Sitting_Idle_Loop':moving>.08&&!flight?'Walk_Loop':'Idle_Loop',t=(name==='Walk_Loop'?walkTime:idle)%(actions.get(name)?.getClip().duration??2.5);
    if(eliminated){deathTime+=playing||progress>=1?dt:0;name='Death01';t=Math.min(deathTime,actions.get(name).getClip().duration-.001);}
    else if(event&&role&&progress<1){
     if(exchange!==event){exchange=event;deathTime=0;}
-    if(role==='attacker'){name=p.gear==='chair'?'Spell_Simple_Shoot':event.special&&['sorcerer','witch','storm','magnet','vision','horns','phoenix'].includes(p.gear)?'Spell_Simple_Shoot':p.attack;if(['Punch_Jab','Punch_Cross'].includes(name)&&event.round%2===0)name=name==='Punch_Jab'?'Punch_Cross':'Punch_Jab';t=progress*actions.get(name).getClip().duration;if(encounter==='brawl'||encounter==='blade'){const clip=meleeClip(progress,encounter,id);name=clip.name;t=clip.phase*actions.get(name).getClip().duration;}if(traveling&&progress>.15&&progress<.28&&!flight){name='Jog_Fwd_Loop';t=progress*4%actions.get(name).getClip().duration;}}
+    if(role==='attacker'){name=p.gear==='chair'?'Spell_Simple_Shoot':event.special&&['sorcerer','witch','storm','magnet','vision','horns','phoenix'].includes(p.gear)?'Spell_Simple_Shoot':p.attack;if(['Punch_Jab','Punch_Cross'].includes(name)&&event.round%2===0)name=name==='Punch_Jab'?'Punch_Cross':'Punch_Jab';t=progress*actions.get(name).getClip().duration;if(encounter==='brawl'||encounter==='blade'){const clip=meleeClip(progress,encounter,id);name=clip.name;t=clip.phase*actions.get(name).getClip().duration;}if(traveling&&progress>.15&&progress<.28&&!flight){name='Jog_Fwd_Loop';t=progress*4*signature.cadence%actions.get(name).getClip().duration;}}
     else if(progress>.48){name=event.dodge&&p.gear!=='chair'?'Roll':'Hit_Chest';t=clamp((progress-.48)/.52)*actions.get(name).getClip().duration;}else if(['brawl','blade'].includes(encounter)&&progress>.28){name=p.gear==='chair'?'Sitting_Idle_Loop':'Punch_Jab';t=clamp((progress-.28)/.2)*.22;}
    }
    if(victory&&!eliminated){name=p.gear==='chair'?'Sitting_Idle_Loop':['sorcerer','witch','phoenix','magnet','horns'].includes(p.gear)?'Spell_Simple_Idle_Loop':'Idle_Loop';t=idle%actions.get(name).getClip().duration;}
    pose(name,t,dt);
+   if(!eliminated&&!victory){for(const [key,axis,angle] of signaturePose(id,{time:idle,moving,flight,role,progress,special:event?.special,reduced})){const bone=bones.get(key);if(bone){overlays.push({bone,quaternion:bone.quaternion.clone()});if(axis==='x')bone.rotateX(angle);else if(axis==='y')bone.rotateY(angle);else bone.rotateZ(angle);}}}
    if(!eliminated&&role==='target'&&['brawl','blade'].includes(encounter)&&progress>.25&&progress<.48){const weight=Math.sin(clamp((progress-.25)/.23)*Math.PI);for(const key of ['upperarm_l','upperarm_r','lowerarm_l','lowerarm_r']){const bone=bones.get(key);if(bone){overlays.push({bone,quaternion:bone.quaternion.clone()});bone.rotateX(-weight*(key.startsWith('lower')?.8:.5));}}}
    if(victory&&!eliminated){const amount=clamp(victoryProgress),magic=['sorcerer','witch','phoenix','magnet','horns','chair'].includes(p.gear);const left=p.gear==='shield',double=magic||['hulk','claws','tree'].includes(p.gear),arm=magic?-.6:['sword','katanas'].includes(p.gear)?-.8:-1.25;const stance=[[left?'upperarm_l':'upperarm_r',arm],[left?'lowerarm_l':'lowerarm_r',-.35],['spine_03',-.09],['Head',-.05]];if(double)stance.push(['upperarm_l',arm],['lowerarm_l',-.35]);for(const [key,angle] of stance){const bone=bones.get(key);if(bone){overlays.push({bone,quaternion:bone.quaternion.clone()});bone.rotateX(angle*amount);}}}
    if(flight&&!eliminated&&!(event&&role&&progress<1)&&p.gear!=='chair'){

@@ -4,7 +4,7 @@ export const ROLES=[
  {id:'protect',name:'Komşunu koru',short:'KORUMA',desc:'Tur başına bir kez komşunun doğrudan hasarının %30’unu üstlenir. Saldırısı −%15.'}
 ];
 export const ZONES=[
- {id:'cover',name:'Siper',symbol:'◇',desc:'Menzilli vuruşlardan −%20 hasar; saldırı −%8. Alan saldırıları siperi aşar.'},
+ {id:'cover',name:'Siper',symbol:'◇',desc:'Menzilli vuruşlardan −%20 hasar; saldırı −%8. Alan saldırıları siperi aşar. Siper 72 dayanıklılıkta başlar; kırılınca bonusları kaybolur.'},
  {id:'open',name:'Açık alan',symbol:'↯',desc:'Saldırı +%8; doğrudan alınan hasar +%8.'},
  {id:'high',name:'Yüksek platform',symbol:'△',desc:'Menzilli saldırı +%8, uçabiliyorsa +%12. Yerdeki kahramanların girişimi −1.'}
 ];

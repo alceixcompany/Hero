@@ -1,3 +1,4 @@
+import {createTerrain,hasCover,damageTerrain} from './battle-terrain.mjs';
 import {metrics,grantShield,absorbShield} from './battle-highlights.mjs';
 import {resolvedPlan,validPlan,adjacent,zoneOf,selectTarget} from './strategy.mjs';
 import {TEAM_LINKS,LINK_CHARGE,teamLinks} from './team-links.mjs';
@@ -46,7 +47,7 @@ export function pass(g){if(g.phase!=='auction')return false;if(g.leader!==null){
 function finishLot(g,winner){const id=g.pool[g.round];if(winner!==null){g.players[winner].coins-=g.bid;g.players[winner].team.push(id);}g.history.push({id,winner,price:winner===null?0:g.bid});g.round++;g.bid=0;g.leader=null;g.passes=0;g.turn=g.round%2;if(g.round>=10||g.players.every(p=>p.team.length===5)){g.phase='ready';for(let p=0;p<2;p++){if(!g.players[p].team.length){const used=g.players.flatMap(x=>x.team);const free=g.pool.find(id=>!used.includes(id));g.players[p].team.push(free);g.history.push({id:free,winner:p,price:0,reinforcement:true});}}}}
 export function synergy(ids){const counts={};ids.forEach(id=>counts[hero(id).group]=(counts[hero(id).group]||0)+1);return Math.min(12,Object.values(counts).reduce((a,n)=>a+Math.max(0,n-1)*4,0));}
 export function botDecision(g,rng=Math.random){const h=hero(g.pool[g.round]);const p=g.players[1];const remaining=Math.max(1,Math.min(5-p.team.length,10-g.round));const value=Math.max(2,Math.round(h.rating/15+(rng()-.5)*3));const max=Math.min(p.coins,Math.max(1,Math.round(p.coins/remaining)+2),value);return canBid(g,1,g.bid+1)&&g.bid<max?g.bid+1:null;}
-export function createBattle(g,rng=Math.random){const arena=ARENAS.find(a=>a.id===g.arena)||ARENAS[0];const fighters=g.players.map((p,side)=>p.team.map(id=>{const placement=resolvedPlan(p.team,g.plans?.[side],hero).find(p=>p.id===id);const h=hero(id);const stats=h.stats.map((n,i)=>n*(arena.boost.includes(i)?1.1:1));const maxHp=Math.round(65+stats[3]*12);return {id,side,slot:placement.slot,role:placement.role,guardRound:-1,metrics:{damage:0,protection:0,healing:0,knockouts:0},shieldSources:[],stats,hp:maxHp,maxHp,shield:0,weaken:false,actions:0,synergy:synergy(p.team)};}));return {fighters,strategy:g.plans?.length===2&&g.plans.every((p,i)=>validPlan(g.players[i].team,p)),arena:g.arena,links:g.players.map(p=>teamLinks(p.team).map(link=>({id:link.id,charge:0,uses:0}))),control:[0,1].map(()=>({energy:35,tactic:'balanced',turns:0,commandAt:-3,tacticAt:-2,overdrive:0,focus:null})),commands:[],round:0,queue:[],done:false,winner:null,events:[],rng,luck:Math.min(25,Math.max(0,g.luck))/100};}
+export function createBattle(g,rng=Math.random){const arena=ARENAS.find(a=>a.id===g.arena)||ARENAS[0];const fighters=g.players.map((p,side)=>p.team.map(id=>{const placement=resolvedPlan(p.team,g.plans?.[side],hero).find(p=>p.id===id);const h=hero(id);const stats=h.stats.map((n,i)=>n*(arena.boost.includes(i)?1.1:1));const maxHp=Math.round(65+stats[3]*12);return {id,side,slot:placement.slot,role:placement.role,guardRound:-1,metrics:{damage:0,protection:0,healing:0,knockouts:0},shieldSources:[],stats,hp:maxHp,maxHp,shield:0,weaken:false,actions:0,synergy:synergy(p.team)};}));return {fighters,terrain:createTerrain(),strategy:g.plans?.length===2&&g.plans.every((p,i)=>validPlan(g.players[i].team,p)),arena:g.arena,links:g.players.map(p=>teamLinks(p.team).map(link=>({id:link.id,charge:0,uses:0}))),control:[0,1].map(()=>({energy:35,tactic:'balanced',turns:0,commandAt:-3,tacticAt:-2,overdrive:0,focus:null})),commands:[],round:0,queue:[],done:false,winner:null,events:[],rng,luck:Math.min(25,Math.max(0,g.luck))/100};}
 export function linkStatus(b,side){
  return (b?.links[side]??[]).map(state=>{const link=TEAM_LINKS.find(l=>l.id===state.id);return {...link,...state,active:link.members.every(id=>b.fighters[side].some(f=>f.id===id&&f.hp>0))};});
 }
@@ -73,14 +74,14 @@ export function battleStep(b){
  const overdrive=control.overdrive>0;if(overdrive){raw*=1.25;control.overdrive--;}
  if(attacker.id==='hulk')raw*=1+(1-attacker.hp/attacker.maxHp)*.3;
  if(attacker.weaken){raw*=.65;attacker.weaken=false;}
- if(b.strategy){raw*=attacker.role==='protect'?.85:attacker.role==='hunt'?.92:1;const zone=zoneOf(attacker.slot).id;raw*=zone==='cover'?.92:zone==='open'?1.08: h.combat==='ranged'?(h.flight?1.12:1.08):1;}
+ if(b.strategy){raw*=attacker.role==='protect'?.85:attacker.role==='hunt'?.92:1;const zone=zoneOf(attacker.slot).id;raw*=zone==='cover'?(hasCover(b,attacker)?.92:1):zone==='open'?1.08: h.combat==='ranged'?(h.flight?1.12:1.08):1;}
  const pierce=special&&h.ability==='pierce';
  let damage=dodge?0:Math.max(5,Math.round((raw-target.stats[3]*(pierce?.3:.9)*(defender.tactic==='guard'?1.25:defender.tactic==='rush'?.7:1))*variance*(crit?1.5:1)*(special?1.25:1)))+(combo?.bonus??0);
  const extras=[],strategy=[];let guard=null;
  if(b.strategy){
-  const zone=zoneOf(target.slot).id;let modifier=zone==='cover'&&h.combat==='ranged'?.8:zone==='open'?1.08:1;
+  const zone=zoneOf(target.slot).id;let modifier=zone==='cover'&&hasCover(b,target)&&h.combat==='ranged'?.8:zone==='open'?1.08:1;
   if(selection.screened){modifier*=.8;strategy.push('Ön saf koruması −%20');}
-  if(zone==='cover'&&h.combat==='ranged'&&!dodge)strategy.push('Siper −%20');
+  if(zone==='cover'&&h.combat==='ranged'&&!dodge)strategy.push(hasCover(b,target)?'Siper −%20':'Kırık siper · Savunma bonusu yok');
   if(selection.flank)strategy.push('Arka safa sızdı');
   if(selection.intercepted)strategy.push('Ön saf hedefi kesti');
   damage=Math.round(damage*modifier);
@@ -106,6 +107,7 @@ export function battleStep(b){
  const defeated=opponents.filter(f=>f.hp===0).map(f=>f.id);
  metrics(attacker).knockouts+=defeated.length;
  const event={hits,round:b.round,attacker:attacker.id,side:attacker.side,target:target.id,damage,absorbed,crit:crit&&!dodge,dodge,special:special&&!dodge,skill:h.skill,overdrive,combo,guard,strategy,flank:selection.flank,intercepted:selection.intercepted,defeated,extras,knockout:target.hp===0};
+ event.terrain=damageTerrain(b,event,hero);for(const c of event.terrain)if(c.broken)event.extras.push(`${c.side===event.side?'Takımının':'Rakibin'} ${c.slot===0?'ön':'arka'} siperi kırıldı${b.strategy?' · Savunma bonusu kayboldu':''}`);
  b.events.push(event);finish();event.finisher=b.done&&!b.decision&&defeated.length>0&&!dodge;return event;
  function finish(){const alive=b.fighters.map((_,s)=>living(s).length);if(alive.includes(0)){b.done=true;b.winner=alive[0]>0?0:alive[1]>0?1:null;}else if(b.round>=40&&!b.queue.length){const health=b.fighters.map(fs=>fs.reduce((a,f)=>a+f.hp,0)/fs.reduce((a,f)=>a+f.maxHp,0));b.done=true;b.winner=Math.abs(health[0]-health[1])<.00001?null:health[0]>health[1]?0:1;b.decision=true;}}
 }

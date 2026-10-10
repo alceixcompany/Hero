@@ -53,3 +53,11 @@ test('crowded mobile labels separate without moving fighters or consuming random
  const labels=[{id:'a',x:200,y:260,width:75,height:36},{id:'b',x:210,y:262,width:75,height:36},{id:'c',x:207,y:270,width:75,height:36}],before=structuredClone(labels);
  const placed=packLabels(labels,{width:537,height:700});assert.deepEqual(labels,before);for(let i=0;i<placed.length;i++)for(let j=i+1;j<placed.length;j++)assert.ok(Math.abs(placed[i].y-placed[j].y)>=40);assert.ok(placed.every(p=>p.x>0&&p.x<537&&p.y>0&&p.y<700));
 });
+
+test('broken cover survives native room snapshots and persisted Vercel reconnects',async()=>{
+ const native=new RoomStore(),a=token(),b=token(),r=native.create('A',a).room;native.join(r.code,'B',b);r.game=game();r.battle=fixture(r.game);r.status='battle';r.playing=false;
+ const c=r.battle.terrain.cover.find(c=>c.side===1&&c.slot===0);c.hp=1;r.battle.fighters[1][0].slot=0;attack(r.battle,'wanda');assert.equal(c.hp,0);assert.deepEqual(native.snapshot(r,0).battle.terrain,native.snapshot(native.resume(r.code,b).room,1).battle.terrain);
+ const redis=new MemoryRedis(),p={auth:{type:'create',name:'A',token:token()},connection:connection()};const request=async(message)=>new RoomService({redis,key:'broken-cover',now:()=>1000,wait:async()=>{}}).request({...p,message});
+ const initial=await request({type:'hello'}),welcome=initial.messages.find(m=>m.type==='welcome');p.auth={...p.auth,type:'resume',code:welcome.code};const persisted=JSON.parse(redis.raw);persisted.rooms[0].battle=r.battle;persisted.rooms[0].game=r.game;persisted.rooms[0].status='battle';persisted.rooms[0].playing=false;redis.raw=JSON.stringify(persisted);
+ p.connection=connection();const restored=await request({type:'hello'}),state=restored.messages.find(m=>m.type==='state');assert.deepEqual(state.battle.terrain,r.battle.terrain);assert.equal(state.battle.terrain.cover.find(c=>c.side===1&&c.slot===0).hp,0);assert.deepEqual(state.battle.events.at(-1).terrain,r.battle.events.at(-1).terrain);
+});

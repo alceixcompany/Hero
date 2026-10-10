@@ -160,3 +160,11 @@ Maçı bitiren isabetli darbe kısa ve yumuşak ağır çekim kullanır. Normal 
 Maç özetinde en çok gerçek can hasarı veren ve en çok koruma katkısı yapan kahraman yer alır. Alan hasarı ve koruyucuya aktarılan hasar hesaba katılır; kalan canın üstündeki hasar sayılmaz. Koruma, üstlenilen doğrudan hasar ve kahramanın verdiği kalkanın gerçekten emdiği hasardır. Oyuncunun takım kalkanı komutu bir kahramana yazılmaz. Kırılma anı, kazananın en çok eleme yapan hamlesi; eşitlikte en çok gerçek hasar veren hamlesidir (beraberlikte iki taraf değerlendirilir). “Arenayı incele” zafer pozlarını açar; “Maç özeti” sonuç kartlarını tekrar gösterir. Çevrimiçi inceleme seçimi yeni snapshot geldiğinde kapanmaz.
 
 Arena, yerel olarak üretilen yansıma ortamı, temas gölgeleri, ekran boyutuna göre gölge çözünürlüğü ve karaktere özgü darbe efektleri kullanır; ek model servisi veya deploy ayarı gerekmez.
+
+## Tepki veren arena ve final düellosu
+
+Her takımın ön ve arka siperinin 72 dayanıklılığı vardır. Gerçek can/kalkan hasarı siperi aşındırır; ağır kahramanlar daha hızlı parçalar. Kıran darbe mevcut korumayı kullanır, sonraki saldırılar siperin %20 menzilli savunmasını ve %8 saldırı kısıtlamasını kaybeder. Kaçırılan darbeler sipere zarar vermez. Dayanıklılık, savaş olayları ve kalıcı yıkım durumu iki çevrimiçi oyuncuya da sunucudan gelir; yeniden bağlanma aynı enkazı gösterir. Rövanş siperleri yeniler.
+
+Hulk’un ağır hazırlanışı ve yer darbesi, Spider-Man’in kavisli sıçrayışı, Wanda’nın iki elle büyü hazırlığı ve Thor’un çakan ışığı farklı hareket/efekt imzaları kullanır. Çatlaklar ve enkaz kalır; geçici toz/parça sayısı sınırlıdır. İskelet hareketleri her karede geri alınarak yeni animasyonla karışır, ölüler bu pozlara girmez.
+
+Her tarafta bir kahraman kaldığı görsel darbe anında final başlar. İki kahramanı kapsayan sabit kadraja yumuşak geçiş yapılır; vuruşlar zoomu değiştirmez. Gereksiz konum yazıları sadeleşir, hedef seçimi, komutlar ve duraklatma erişilebilir kalır. Müzik açıkken daha hızlı, düşük sesli gerilim ritmi eklenir; haricî parça seçiliyse yalnızca alt ritim çalar. Sessiz/duraklatılmış oyun bu ritmi kapatır. Hareket azaltma tercihi otomatik yakınlaşma, parlama ve parçacıkları kapatır.

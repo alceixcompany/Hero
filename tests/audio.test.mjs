@@ -20,3 +20,7 @@ test('mute gates effects immediately, silence stops the music loop, and saved vo
  audio.setSettings({enabled:false});const before=scheduled.length;audio.impact({attacker:'ironman',side:0});audio.result();assert.equal(scheduled.length,before);assert.equal(audio.master.gain.value,0);
  const stored=new GameAudio({storage:{getItem:()=>'{"enabled":false,"effects":4,"music":-2}'}});assert.deepEqual(stored.settings,{enabled:false,effects:1,music:0});
 });
+test('final duel rhythm respects pause, mute and external soundtrack and adds debris sound',async()=>{
+ const {audio,scheduled}=audioFixture();await audio.unlock();audio.setScene('arena');audio.setExternalMusic(true);assert.equal(audio.timer,null);audio.setTension(true);assert.ok(audio.timer);assert.equal(audio.musicBus.gain.value,audio.settings.music*.45);const before=scheduled.length;audio.impact({attacker:'hulk',side:0,terrain:[{broken:true}]});assert.ok(scheduled.length>before);
+ audio.setScene('silent');assert.equal(audio.timer,null);assert.equal(audio.musicBus.gain.value,0);audio.setScene('arena');assert.ok(audio.timer);audio.setSettings({enabled:false});assert.equal(audio.timer,null);audio.setTension(false);assert.equal(audio.musicBus.gain.value,0);audio.stopMusic();
+});

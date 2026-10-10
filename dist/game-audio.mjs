@@ -35,14 +35,15 @@ export class GameAudio{
   try{this.storage?.setItem('nexus-audio-v1',JSON.stringify(this.settings));}catch{}
   this.applyVolumes();if(!this.settings.enabled||!this.settings.music)this.stopMusic();if(this.settings.enabled){void this.unlock();this.scheduleMusic();}this.onState(this.status);
  }
- applyVolumes(){if(!this.ctx)return;const t=this.ctx.currentTime;this.master.gain.setTargetAtTime(this.settings.enabled?.8:0,t,.035);this.musicBus.gain.setTargetAtTime(this.scene==='silent'||this.externalMusic?0:this.settings.music,t,.07);this.fxBus.gain.setTargetAtTime(this.settings.effects,t,.035);}
+ applyVolumes(){if(!this.ctx)return;const t=this.ctx.currentTime;this.master.gain.setTargetAtTime(this.settings.enabled?.8:0,t,.035);this.musicBus.gain.setTargetAtTime(this.scene==='silent'?0:this.externalMusic?this.tension?this.settings.music*.45:0:this.settings.music*(this.tension?1.25:1),t,.07);this.fxBus.gain.setTargetAtTime(this.settings.effects,t,.035);}
+ setTension(active){active=!!active;if(active===this.tension)return;this.tension=active;this.stopMusic();this.applyVolumes();this.scheduleMusic();}
  setExternalMusic(active){this.externalMusic=active;this.stopMusic();this.applyVolumes();this.scheduleMusic();}
  setScene(scene){if(scene===this.scene)return;this.scene=scene;this.stopMusic();this.applyVolumes();this.scheduleMusic();}
  stopMusic(){clearInterval(this.timer);this.timer=null;this.nextBeat=0;}
  scheduleMusic(){
-  if(this.externalMusic||this.timer||this.scene==='silent'||!this.settings.enabled||!this.settings.music||this.ctx?.state!=='running')return;
+  if(this.externalMusic&&!this.tension||this.timer||this.scene==='silent'||!this.settings.enabled||!this.settings.music||this.ctx?.state!=='running')return;
   const schedule=()=>{if(this.ctx.state!=='running')return;const now=this.ctx.currentTime;if(this.nextBeat<now)this.nextBeat=now+.03;
-   while(this.nextBeat<now+.15){this.musicBeat(this.nextBeat,this.beat++);this.nextBeat+=this.scene==='arena'?.28:.42;}
+   while(this.nextBeat<now+.15){this.musicBeat(this.nextBeat,this.beat++);this.nextBeat+=this.scene==='arena'?this.tension?.22:.28:.42;}
   };schedule();this.timer=setInterval(schedule,100);
  }
  note(freq,duration,volume=.2,type='sine',time=this.ctx.currentTime,bus=this.fxBus,pan=0,to=freq){
@@ -59,9 +60,16 @@ export class GameAudio{
  }
  musicBeat(t,beat){
   const roots=[55,65.406,48.999,58.27],root=roots[Math.floor(beat/16)%4],pattern=[1,1.5,2,2.4,2,1.5,3,2.4];
+  if(this.externalMusic){if(this.tension)this.tensionBeat(t,beat,root);return;}
   this.note(root*pattern[beat%8],.5,.085,'triangle',t,this.musicBus,Math.sin(beat)*.25);
   if(beat%8===0){this.note(root,.9,.13,'sine',t,this.musicBus);this.note(root*3,1.2,.035,'sine',t,this.musicBus);}
+  if(this.tension&&this.scene==='arena')this.tensionBeat(t,beat,root);
   if(this.scene==='arena'){if(beat%4===0)this.note(95,.14,.15,'sine',t,this.musicBus,0,35);if(beat%4===2)this.noise(.1,.045,1800,t,0,this.musicBus,'bandpass');if(beat%2)this.noise(.035,.012,8000,t,0,this.musicBus,'highpass');}
+ }
+ tensionBeat(t,beat,root){
+  if(beat%2===0)this.note(80,.2,.11,'sine',t,this.musicBus,0,32);
+  if(beat%4===2)this.noise(.13,.055,900,t,0,this.musicBus,'bandpass');
+  if(beat%8===0)this.note(root,.8,.1,'triangle',t,this.musicBus,0,root*.9);
  }
  ready(){return this.settings.enabled&&this.settings.effects>0&&this.ctx?.state==='running';}
  ui(kind='click'){
@@ -86,6 +94,7 @@ export class GameAudio{
   else if(family==='web'){this.noise(.1,.17,3800,t,pan,undefined,'bandpass');this.note(420,.16,.05,'sine',t,undefined,pan,90);}
   else if(family==='shield'){[680,1130,1620].forEach(f=>this.note(f,.23,.045,'triangle',t,undefined,pan));this.noise(.08,.13,1500,t,pan);}
   else{this.note(110,.19,.2*strength,'sine',t,undefined,pan,35);this.noise(.13,.19,650,t,pan);}
+  if(event.terrain?.some(c=>c.broken)){this.noise(.55,.16,1300,t,pan);this.note(75,.45,.14,'sine',t,undefined,pan,28);}
   if(event.finisher){this.note(65,.8,.12,'sine',t,undefined,0,28);[220,330,440].forEach((f,i)=>this.note(f,.55,.035,'triangle',t+.18+i*.09));}
   if(event.absorbed){this.note(1100,.26,.08,'sine',t,undefined,pan,500);}
   if(event.combo){this.note(82,.35,.22,'sine',t,undefined,0,35);this.note(660,.33,.075,'triangle',t+.08,undefined,0,1320);}

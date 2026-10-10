@@ -180,10 +180,11 @@ function render(){
  document.body.classList.toggle('arena-immersive',immersive);document.querySelector('.cinema-arena')?.classList.toggle('is-immersive',immersive);
  if(tab==='arena'&&!lobby){
   const host=document.querySelector('#arena-scene');
-  try{arenaScene??=new Arena3D({onImpact:playBattleSound,onAttack:event=>audio.attack(event)});arenaScene.mount(host,document.querySelector('#arena-actor-labels'),document.querySelector('#arena-hit-label'),!battle&&game.mode==='local'?{...game,plans:[null,null]}:game,battle,lastEvent,speed,playing,restoringBattleFrame);restoringBattleFrame=false;}
+  try{arenaScene??=new Arena3D({onImpact:playBattleSound,onAttack:event=>audio.attack(event),onDuel:active=>audio.setTension(active)});arenaScene.mount(host,document.querySelector('#arena-actor-labels'),document.querySelector('#arena-hit-label'),!battle&&game.mode==='local'?{...game,plans:[null,null]}:game,battle,lastEvent,speed,playing,restoringBattleFrame);restoringBattleFrame=false;}
   catch(err){host.innerHTML='<div class="scene-error">3B sahne bu tarayıcıda açılamadı. Mücadeleyi aşağıdaki takım panelleri ve günlükten izleyebilirsin.</div>';console.warn('Arena renderer unavailable',err);}
  }
- audio.setScene(document.hidden?'silent':tab==='arena'?battle&&playing&&!battle.done?'arena':battle?'silent':'lobby':'lobby');updateAudioStatus();scheduleBot();applyOnlineOwnership();updateAuctionClock();syncStrategy();
+ if(tab!=='arena'||!battle)audio.setTension(false);
+ audio.setScene(document.hidden?'silent':tab==='arena'?battle&&playing&&(!battle.done||arenaScene?.isAnimating())?'arena':battle?'silent':'lobby':'lobby');updateAudioStatus();scheduleBot();applyOnlineOwnership();updateAuctionClock();syncStrategy();
 }
 
 function showModal(content,cls=''){modal.removeAttribute('aria-label');characterPreview?.dispose();characterPreview=null;modal.className=cls;modal.innerHTML=`<button class="modal-close icon-button" data-action="close" aria-label="Kapat">${icon('cross')}</button>${content}`;if(!modal.open)modal.showModal();}

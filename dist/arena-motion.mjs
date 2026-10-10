@@ -15,11 +15,11 @@ export function retimeExchange(action,speed,reduced=false){
 export const smoothStep=n=>{const x=Math.max(0,Math.min(1,n));return x*x*(3-2*x);};
 // One continuous journey with a short planted contact, then a deliberate recovery.
 export function exchangeMotion(progress,{flight=false,ranged=false,id='',special=false,reduced=false,flank=false,encounter='',targetLift=0}={}){
- const p=Math.max(0,Math.min(1,progress)),approach=smoothStep((p-.15)/.3),recovery=smoothStep((p-.6)/.4),envelope=Math.sin(Math.PI*p);
+ const p=Math.max(0,Math.min(1,progress)),approach=smoothStep((p-(id==='hulk'?.19:id==='spiderman'?.1:.15))/(id==='hulk'?.26:id==='spiderman'?.32:.3)),recovery=smoothStep((p-.6)/.4),envelope=Math.sin(Math.PI*p);
  const diving=encounter==='aerial',travel=ranged&&!diving?0:approach*(1-recovery),recoil=p<.48?0:Math.sin(Math.PI*Math.min(1,(p-.48)/.52))**2;
  const baseLift=reduced?0:diving?Math.sin(Math.PI*approach)*(1-recovery)*2.25+recovery*(1-recovery)*1.4:id==='spiderman'&&!ranged?Math.sin(Math.PI*travel)*1.45:id==='hulk'&&special?Math.sin(Math.PI*travel)*.85:flight?envelope*(ranged?.3:.65):0;
  const lift=!flight&&!ranged?Math.max(baseLift,Math.max(0,targetLift)*travel):baseLift;
- return {travel,lift,bank:diving&&!reduced?Math.sin(Math.PI*travel)*.48:flight&&!reduced?envelope*(ranged?.12:.2):0,recoil,dodge:recoil*1.05,arc:(!ranged||diving)&&!reduced?Math.sin(Math.PI*travel)*(flank?1.2:.28):0};
+ return {travel,lift,bank:diving&&!reduced?Math.sin(Math.PI*travel)*.48:flight&&!reduced?envelope*(ranged?.12:.2):0,recoil,dodge:recoil*1.05,arc:(!ranged||diving)&&!reduced?Math.sin(Math.PI*travel)*(flank?1.2:id==='spiderman'?.85:id==='hulk'?.12:.28):0};
 }
 export function avoidCrowding(position,others,id,dt=1/60){
  let x=position[0],z=position[1];
