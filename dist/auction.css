@@ -7,3 +7,4 @@
 @media(prefers-reduced-motion:reduce){.is-reveal .feature-art .portrait,.is-reveal .hero-reveal-flare{animation:none}.auction-pressure>i{transition:none}}
 .auction-duel .feature-info{background:#192a36;color:#e7e9e3}.auction-duel .stat small{color:#879da8}.auction-duel .feature-heading{border-color:#354752}.auction-page .pool-card.sealed{color:#667b5a}
 @media(max-width:650px){.header-actions .outline[data-action=rules]{padding:6px;font-size:8px}.header-actions .outline[data-action=online]{padding:6px 8px;font-size:9px}.header-actions{gap:6px}.room-status-bar{line-height:1.7}.header .brand-tag{display:none}}
+.auction-duel .stat>span{color:#b5c3ca}
