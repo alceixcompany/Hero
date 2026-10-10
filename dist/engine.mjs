@@ -1,3 +1,5 @@
+import {TEAM_LINKS,LINK_CHARGE,teamLinks} from './team-links.mjs?v=6';
+export {TEAM_LINKS,LINK_CHARGE,teamLinks} from './team-links.mjs?v=6';
 export const STAT_LABELS=['Güç','Zekâ','Hız','Dayanıklılık','Teknoloji','Enerji'];
 export const HEROES=[
 {id:'ironman',name:'Iron Man',alias:'Tony Stark',type:'Teknoloji',group:'Avengers',color:'#e69b45',stats:[7,10,7,8,10,7],skill:'Ark reaktörü',desc:'Zırhını akıllıca kullanır. Reaktör atışı, savunmanın bir bölümünü deler.',ability:'pierce',quote:'Bir zırhtan çok daha fazlası.'},
@@ -42,12 +44,54 @@ export function pass(g){if(g.phase!=='auction')return false;if(g.leader!==null){
 function finishLot(g,winner){const id=g.pool[g.round];if(winner!==null){g.players[winner].coins-=g.bid;g.players[winner].team.push(id);}g.history.push({id,winner,price:winner===null?0:g.bid});g.round++;g.bid=0;g.leader=null;g.passes=0;g.turn=g.round%2;if(g.round>=10||g.players.every(p=>p.team.length===5)){g.phase='ready';for(let p=0;p<2;p++){if(!g.players[p].team.length){const used=g.players.flatMap(x=>x.team);const free=g.pool.find(id=>!used.includes(id));g.players[p].team.push(free);g.history.push({id:free,winner:p,price:0,reinforcement:true});}}}}
 export function synergy(ids){const counts={};ids.forEach(id=>counts[hero(id).group]=(counts[hero(id).group]||0)+1);return Math.min(12,Object.values(counts).reduce((a,n)=>a+Math.max(0,n-1)*4,0));}
 export function botDecision(g,rng=Math.random){const h=hero(g.pool[g.round]);const p=g.players[1];const remaining=Math.max(1,Math.min(5-p.team.length,10-g.round));const value=Math.max(2,Math.round(h.rating/15+(rng()-.5)*3));const max=Math.min(p.coins,Math.max(1,Math.round(p.coins/remaining)+2),value);return canBid(g,1,g.bid+1)&&g.bid<max?g.bid+1:null;}
-export function createBattle(g,rng=Math.random){const arena=ARENAS.find(a=>a.id===g.arena)||ARENAS[0];const fighters=g.players.map((p,side)=>p.team.map(id=>{const h=hero(id);const stats=h.stats.map((n,i)=>n*(arena.boost.includes(i)?1.1:1));const maxHp=Math.round(65+stats[3]*12);return {id,side,stats,hp:maxHp,maxHp,shield:0,weaken:false,actions:0,synergy:synergy(p.team)};}));return {fighters,control:[0,1].map(()=>({energy:35,tactic:'balanced',turns:0,commandAt:-3,tacticAt:-2,overdrive:0,focus:null})),commands:[],round:0,queue:[],done:false,winner:null,events:[],rng,luck:Math.min(25,Math.max(0,g.luck))/100};}
-export function battleStep(b){if(b.done)return null;const living=s=>b.fighters[s].filter(f=>f.hp>0);if(!b.queue.length){b.round++;b.queue=b.fighters.flat().filter(f=>f.hp>0).map(f=>({f,initiative:f.stats[2]+f.stats[1]*.15+b.rng()*2})).sort((a,c)=>c.initiative-a.initiative).map(x=>x.f);}
-let attacker=b.queue.shift();while(attacker&&attacker.hp<=0)attacker=b.queue.shift();if(!attacker)return battleStep(b);const opponents=living(1-attacker.side);const randomTarget=opponents[Math.floor(b.rng()*opponents.length)];const control=b.control[attacker.side],defender=b.control[1-attacker.side];const target=opponents.find(f=>f.id===control.focus)||randomTarget;if(!target){finish();return null;}attacker.actions++;control.turns++;control.energy=Math.min(100,control.energy+8);defender.energy=Math.min(100,defender.energy+4);const special=attacker.actions%3===0;const h=hero(attacker.id);const crit=b.rng()<b.luck;const dodge=b.rng()<Math.min(.20,Math.min(.16,Math.max(.02,(target.stats[2]-attacker.stats[1])*.012+.04))+(defender.tactic==='guard'?.04:0));const variance=1+(b.rng()*2-1)*b.luck;let raw=(attacker.stats[0]*1.5+attacker.stats[5]*1.15+attacker.stats[4]*.65+attacker.stats[1]*.4+7)*(1+attacker.synergy/100);raw*=control.tactic==='rush'?1.18:control.tactic==='guard'?.9:1;const overdrive=control.overdrive>0;if(overdrive){raw*=1.25;control.overdrive--;}if(attacker.id==='hulk')raw*=1+(1-attacker.hp/attacker.maxHp)*.3;if(attacker.weaken){raw*=.65;attacker.weaken=false;}const pierce=special&&h.ability==='pierce';let damage=dodge?0:Math.max(5,Math.round((raw-target.stats[3]*(pierce?.3:.9)*(defender.tactic==='guard'?1.25:defender.tactic==='rush'?.7:1))*variance*(crit?1.5:1)*(special?1.25:1)));const absorbed=Math.min(target.shield,damage);target.shield-=absorbed;damage-=absorbed;target.hp=Math.max(0,target.hp-damage);const extras=[];
-if(special&&!dodge){if(h.ability==='heal'){const heal=Math.min(24,attacker.maxHp-attacker.hp);attacker.hp+=heal;extras.push(`${h.name} +${heal} can yeniledi`);}if(h.ability==='shield'){living(attacker.side).forEach(f=>f.shield=Math.min(60,f.shield+15));extras.push('Takıma +15 kalkan');}if(h.ability==='weaken'&&target.hp>0){target.weaken=true;extras.push('Hedefin sonraki saldırısı −%35');}if(h.ability==='aoe'){opponents.filter(f=>f!==target&&f.hp>0).forEach(f=>{const d=Math.round(8+attacker.stats[5]);const a=Math.min(d,f.shield);f.shield-=a;f.hp=Math.max(0,f.hp-(d-a));});extras.push('Alan hasarı diğer rakiplere yayıldı');}}
-const event={round:b.round,attacker:attacker.id,side:attacker.side,target:target.id,damage,absorbed,crit:crit&&!dodge,dodge,special:special&&!dodge,skill:h.skill,overdrive,extras,knockout:target.hp===0};b.events.push(event);finish();return event;
-function finish(){const alive=b.fighters.map((_,s)=>living(s).length);if(alive.includes(0)){b.done=true;b.winner=alive[0]>0?0:alive[1]>0?1:null;}else if(b.round>=40&&!b.queue.length){const health=b.fighters.map(fs=>fs.reduce((a,f)=>a+f.hp,0)/fs.reduce((a,f)=>a+f.maxHp,0));b.done=true;b.winner=Math.abs(health[0]-health[1])<.00001?null:health[0]>health[1]?0:1;b.decision=true;}}}
+export function createBattle(g,rng=Math.random){const arena=ARENAS.find(a=>a.id===g.arena)||ARENAS[0];const fighters=g.players.map((p,side)=>p.team.map(id=>{const h=hero(id);const stats=h.stats.map((n,i)=>n*(arena.boost.includes(i)?1.1:1));const maxHp=Math.round(65+stats[3]*12);return {id,side,stats,hp:maxHp,maxHp,shield:0,weaken:false,actions:0,synergy:synergy(p.team)};}));return {fighters,links:g.players.map(p=>teamLinks(p.team).map(link=>({id:link.id,charge:0,uses:0}))),control:[0,1].map(()=>({energy:35,tactic:'balanced',turns:0,commandAt:-3,tacticAt:-2,overdrive:0,focus:null})),commands:[],round:0,queue:[],done:false,winner:null,events:[],rng,luck:Math.min(25,Math.max(0,g.luck))/100};}
+export function linkStatus(b,side){
+ return (b?.links[side]??[]).map(state=>{const link=TEAM_LINKS.find(l=>l.id===state.id);return {...link,...state,active:link.members.every(id=>b.fighters[side].some(f=>f.id===id&&f.hp>0))};});
+}
+export function battleStep(b){
+ if(b.done)return null;
+ const living=s=>b.fighters[s].filter(f=>f.hp>0);
+ if(!b.queue.length){b.round++;b.queue=b.fighters.flat().filter(f=>f.hp>0).map(f=>({f,initiative:f.stats[2]+f.stats[1]*.15+b.rng()*2})).sort((a,c)=>c.initiative-a.initiative).map(x=>x.f);}
+ let attacker=b.queue.shift();while(attacker&&attacker.hp<=0)attacker=b.queue.shift();if(!attacker)return battleStep(b);
+ const opponents=living(1-attacker.side),randomTarget=opponents[Math.floor(b.rng()*opponents.length)];
+ const control=b.control[attacker.side],defender=b.control[1-attacker.side],target=opponents.find(f=>f.id===control.focus)||randomTarget;
+ if(!target){finish();return null;}
+ attacker.actions++;control.turns++;control.energy=Math.min(100,control.energy+8);defender.energy=Math.min(100,defender.energy+4);
+ const special=attacker.actions%3===0,h=hero(attacker.id),crit=b.rng()<b.luck;
+ const dodge=b.rng()<Math.min(.20,Math.min(.16,Math.max(.02,(target.stats[2]-attacker.stats[1])*.012+.04))+(defender.tactic==='guard'?.04:0));
+ const variance=1+(b.rng()*2-1)*b.luck;
+ const activeLinks=linkStatus(b,attacker.side).filter(l=>l.active&&l.members.includes(attacker.id));
+ for(const link of activeLinks){const state=b.links[attacker.side].find(s=>s.id===link.id);state.charge=Math.min(LINK_CHARGE,state.charge+1);}
+ const readyLink=!dodge?activeLinks.find(link=>b.links[attacker.side].find(s=>s.id===link.id).charge===LINK_CHARGE):null;
+ let combo=null;
+ if(readyLink){const state=b.links[attacker.side].find(s=>s.id===readyLink.id);state.charge=0;state.uses++;combo={id:readyLink.id,name:readyLink.name,members:[...readyLink.members],partner:readyLink.members.find(id=>id!==attacker.id),color:readyLink.color,bonus:readyLink.effect.damage};}
+ let raw=(attacker.stats[0]*1.5+attacker.stats[5]*1.15+attacker.stats[4]*.65+attacker.stats[1]*.4+7)*(1+attacker.synergy/100);
+ raw*=control.tactic==='rush'?1.18:control.tactic==='guard'?.9:1;
+ const overdrive=control.overdrive>0;if(overdrive){raw*=1.25;control.overdrive--;}
+ if(attacker.id==='hulk')raw*=1+(1-attacker.hp/attacker.maxHp)*.3;
+ if(attacker.weaken){raw*=.65;attacker.weaken=false;}
+ const pierce=special&&h.ability==='pierce';
+ let damage=dodge?0:Math.max(5,Math.round((raw-target.stats[3]*(pierce?.3:.9)*(defender.tactic==='guard'?1.25:defender.tactic==='rush'?.7:1))*variance*(crit?1.5:1)*(special?1.25:1)))+(combo?.bonus??0);
+ const absorbed=Math.min(target.shield,damage);target.shield-=absorbed;damage-=absorbed;target.hp=Math.max(0,target.hp-damage);
+ const extras=[];
+ const splash=amount=>opponents.filter(f=>f!==target&&f.hp>0).forEach(f=>{const absorb=Math.min(amount,f.shield);f.shield-=absorb;f.hp=Math.max(0,f.hp-(amount-absorb));});
+ if(special&&!dodge){
+  if(h.ability==='heal'){const heal=Math.min(24,attacker.maxHp-attacker.hp);attacker.hp+=heal;extras.push(`${h.name} +${heal} can yeniledi`);}
+  if(h.ability==='shield'){living(attacker.side).forEach(f=>f.shield=Math.min(60,f.shield+15));extras.push('Takıma +15 kalkan');}
+  if(h.ability==='weaken'&&target.hp>0){target.weaken=true;extras.push('Hedefin sonraki saldırısı −%35');}
+  if(h.ability==='aoe'){splash(Math.round(8+attacker.stats[5]));extras.push('Alan hasarı diğer rakiplere yayıldı');}
+ }
+ if(readyLink){
+  const effect=readyLink.effect;
+  if(effect.splash){splash(effect.splash);extras.push(`İkili hamle: diğer rakiplere ${effect.splash} alan hasarı`);}
+  if(effect.shield){living(attacker.side).filter(f=>readyLink.members.includes(f.id)).forEach(f=>f.shield=Math.min(60,f.shield+effect.shield));extras.push(`İkiliye +${effect.shield} kalkan`);}
+  if(effect.weaken&&target.hp>0){target.weaken=true;extras.push('İkili hamle: hedefin sonraki saldırısı −%35');}
+ }
+ const defeated=opponents.filter(f=>f.hp===0).map(f=>f.id);
+ const event={round:b.round,attacker:attacker.id,side:attacker.side,target:target.id,damage,absorbed,crit:crit&&!dodge,dodge,special:special&&!dodge,skill:h.skill,overdrive,combo,defeated,extras,knockout:target.hp===0};
+ b.events.push(event);finish();return event;
+ function finish(){const alive=b.fighters.map((_,s)=>living(s).length);if(alive.includes(0)){b.done=true;b.winner=alive[0]>0?0:alive[1]>0?1:null;}else if(b.round>=40&&!b.queue.length){const health=b.fighters.map(fs=>fs.reduce((a,f)=>a+f.hp,0)/fs.reduce((a,f)=>a+f.maxHp,0));b.done=true;b.winner=Math.abs(health[0]-health[1])<.00001?null:health[0]>health[1]?0:1;b.decision=true;}}
+}
 
 export const TACTICS=[{id:'balanced',name:'Dengeli',desc:'Standart saldırı ve savunma.'},{id:'rush',name:'Hücum',desc:'+%18 saldırı, −%30 savunma.'},{id:'guard',name:'Savunma',desc:'−%10 saldırı, +%25 savunma, +4 puan kaçış.'}];
 export const COMMANDS=[{id:'overdrive',name:'Güç patlaması',cost:35,desc:'Sonraki 3 takım saldırısı +%25 hasar.',symbol:'↯'},{id:'barrier',name:'Takım kalkanı',cost:35,desc:'Yaşayan kahramanlara +22 kalkan (en fazla 60).',symbol:'◇'},{id:'rally',name:'İkinci nefes',cost:50,desc:'Yaşayan kahramanlara +20 can.',symbol:'✚'}];

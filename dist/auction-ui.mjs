@@ -1,4 +1,4 @@
-import {hero,visibleLots} from './engine.mjs?v=5';
+import {hero,visibleLots} from './engine.mjs?v=6';
 export function auctionLots(game,portrait){
   return `<section class="pool-section"><div class="section-line"><h2>AÇILAN KAHRAMANLAR</h2><span class="muted">${Math.min(game.round,10)} / 10 tamamlandı</span></div><div class="pool">${visibleLots(game).map(({id,index:i})=>{
     if(!id)return `<div class="pool-card sealed" aria-label="${i+1}. karakter gizli"><span class="pool-number">${String(i+1).padStart(2,'0')}</span><span class="sealed-emblem">N</span><strong>GİZLİ</strong><span class="pool-type">Sırası gelince açılır</span></div>`;

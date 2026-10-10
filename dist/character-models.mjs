@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/addons/loaders/GLTFLoader.js';
 import {clone} from './vendor/addons/utils/SkeletonUtils.js';
-import {profileFor} from './character-profiles.mjs?v=5';
+import {profileFor} from './character-profiles.mjs?v=6';
 
 const folder='/assets/characters/', loader=new GLTFLoader(), cache=new Map();
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
@@ -171,7 +171,7 @@ export async function loadCharacter(id,{getAsset=asset}={}){
   }
  }
  for(const clip of clips){const action=mixer.clipAction(clip);action.play();action.weight=0;action.enabled=true;actions.set(clip.name,action);}
- let idle=0,current=null,exchange=null,deathTime=0;
+ let idle=0,current=null,exchange=null,deathTime=0,eliminated=false;
  function pose(name,t,dt){
   if(!actions.has(name))name='Idle_Loop';const transition=1-Math.exp(-dt*18);
   for(const [key,action] of actions){action.weight=THREE.MathUtils.lerp(action.weight,key===name?1:0,current?transition:1);if(key===name)action.time=Math.max(0,Math.min(action.getClip().duration-.001,t));}
@@ -179,16 +179,17 @@ export async function loadCharacter(id,{getAsset=asset}={}){
  }
  pose(p.gear==='chair'?'Sitting_Idle_Loop':'Idle_Loop',0,0);
  return {object:visual,profile:p,bones,clipNames:clips.map(c=>c.name),...attachments,
+  reset(){eliminated=false;deathTime=0;exchange=null;idle=0;current=null;pose(p.gear==='chair'?'Sitting_Idle_Loop':'Idle_Loop',0,0);},
   update({dt,playing=true,moving=0,flight=false,event=null,role=null,progress=1,dead=false}){
-   if(!dead)deathTime=0;if(playing)idle+=dt;let name=p.gear==='chair'?'Sitting_Idle_Loop':moving>.08&&!flight?'Walk_Loop':'Idle_Loop',t=idle%(actions.get(name)?.getClip().duration??2.5);
-   if(dead){deathTime+=playing||progress>=1?dt:0;name='Death01';t=Math.min(deathTime,actions.get(name).getClip().duration-.001);}
+   eliminated||=dead;if(playing&&!eliminated)idle+=dt;let name=p.gear==='chair'?'Sitting_Idle_Loop':moving>.08&&!flight?'Walk_Loop':'Idle_Loop',t=idle%(actions.get(name)?.getClip().duration??2.5);
+   if(eliminated){deathTime+=playing||progress>=1?dt:0;name='Death01';t=Math.min(deathTime,actions.get(name).getClip().duration-.001);}
    else if(event&&role&&progress<1){
     if(exchange!==event){exchange=event;deathTime=0;}
     if(role==='attacker'){name=p.gear==='chair'?'Spell_Simple_Shoot':event.special&&['sorcerer','witch','storm','magnet','vision','horns','phoenix'].includes(p.gear)?'Spell_Simple_Shoot':p.attack;t=progress*actions.get(name).getClip().duration;}
     else if(progress>.48){name=event.dodge?'Roll':'Hit_Chest';t=clamp((progress-.48)/.52)*actions.get(name).getClip().duration;}
    }
    pose(name,t,dt);
-   this.jets.forEach(j=>{j.visible=flight&&!dead;j.scale.y=.9+Math.sin(idle*23)*.12;});
+   this.jets.forEach(j=>{j.visible=flight&&!eliminated;j.scale.y=.9+Math.sin(idle*23)*.12;});
   },
   dispose(){mixer.stopAllAction();mixer.uncacheRoot(model);const geometry=new Set(),materials=new Set(),skeletons=new Set();model.traverse(n=>{if(n.isMesh){if(!n.geometry.userData.shared)geometry.add(n.geometry);if(n.isSkinnedMesh)skeletons.add(n.skeleton);if(n.material)(Array.isArray(n.material)?n.material:[n.material]).forEach(m=>materials.add(m));}});geometry.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());skeletons.forEach(s=>s.dispose());}
  };
