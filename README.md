@@ -1,6 +1,6 @@
 # NEXUS — Kahramanlar Arenası
 
-Hero / NEXUS: Türkçe açık artırma ve 3B arena oyunu. Aynı cihaz, bot ve iki ayrı cihazdan çevrimiçi oda modları vardır. Node.js 22+ önerilir; Node 20.19+ ile de çalışır.
+Hero / NEXUS: Türkçe açık artırma ve 3B arena oyunu. Aynı cihaz, bot ve iki ayrı cihazdan çevrimiçi oda modları vardır. Yayın için Node.js 22.x kullanılır.
 
 ```sh
 npm ci
@@ -97,6 +97,21 @@ Arşivde **Marvel bağları** rehberi, kahraman detaylarında eşleşmeler, aç�
 `npm run dev` hem `http://127.0.0.1:5173` hem bilgisayarın LAN adresini yazdırır. İkinci cihaz **127.0.0.1 kullanmaz**; terminaldeki `http://192.168.x.x:5173` adresini açar. Yerel cihazdan oluşturulan davet bağlantısı otomatik LAN adresini kullanır. Bilgisayar açık kalmalı; aynı Wi-Fi, TCP 5173 erişimi ve cihazlar arası iletişim gerekir. Konuk Wi-Fi izolasyonu veya işletim sistemi güvenlik duvarı erişimi engelleyebilir. VPN varsa doğru LAN adresini kullanın.
 
 ### İnternet üzerinden yayınlama
+
+#### Vercel
+
+`vercel.json` projeyi **Other** olarak seçer, `npm run build` çalıştırır ve `build/` klasörünü statik yayınlar. Root Directory depo kökü olmalı (boş veya `.`). `server.mjs` bir Vercel Function olarak derlenmez. Tarayıcı importlarındaki `?v=9` önbellek ekleri URL olarak korunur; derleyici bunları disk dosyası adı olarak çözmeye çalışmaz. Node sürümü `22.x` ile sabitlenmiştir. Vercel'de eski başarısız commit'i yeniden yayınlamak yerine son `main` commit'ini deploy edin.
+
+Bu statik yayında aynı cihaz ve bot modu çalışır. **Çevrimiçi odalar için çalışan bir Node oda sunucusu gerekir.** Sunucu bağlanana kadar arayüz bunu açıkça gösterir ve olmayan `/ws` endpoint'ine tekrar tekrar bağlanmaz.
+
+1. Node/WebSocket ve kalıcı disk destekleyen sunucuda aşağıdaki `npm ci && npm start` veya Docker kurulumunu çalıştırın. Tek instance kullanın; `ROOM_DATA_FILE` kalıcı diskteki dosyayı göstermeli.
+2. Oda sunucusunda `ALLOWED_ORIGINS=https://oyununuz.vercel.app` ayarlayın. Özel alan adı da varsa virgülle ekleyin; joker karakter kabul edilmez. Preview adreslerini yalnızca gerektiğinde ayrıca ekleyin.
+3. Vercel → Settings → Environment Variables: `NEXUS_ROOM_SERVER_URL=https://oda-sunucunuz.example.com` ekleyin. Bu herkese açık sunucu adresidir; `/ws` uzantısı, gizli anahtar veya token eklemeyin. Production/Preview ortamlarını ayrı yapılandırın, sonra yeniden deploy edin.
+4. Vercel oyununda **Çevrimiçi → Oda oluştur** ile deneyin. Davet linki Vercel oyun adresini korur; oyuncular güvenli `wss://oda-sunucunuz.example.com/ws` üzerinden aynı sunucuya bağlanır. Oyuncu oturumları farklı sunucular arasında taşınmaz.
+
+Vercel artık [WebSocket Functions beta](https://vercel.com/docs/functions/websockets) sunuyor; ancak farklı bağlantıların/reconnect'lerin aynı instance'a ulaşacağı garantisi yok ve bağlantılar Function süre sınırında kapanır. Mevcut oyun tek süreçte oda yönetimi ve kalıcı dosya kullanır. Bu sunucuyu doğrudan bir Function'a koymak iki oyuncuyu farklı odalarda bırakabilir veya oda kaydını kaybettirebilir. Tam Vercel backend uyarlaması ortak kalıcı veri deposu, süreçler arası mesajlaşma ve dağıtık hamle/saat yönetimi gerektirir. Bu yayın düzeni mevcut Node sunucusunu korur.
+
+#### Node / Docker (oyun ve oda sunucusu birlikte)
 
 GitHub’a kod göndermek çalışan oyun sunucusu oluşturmaz. Node.js/WebSocket destekleyen tek bir sunucu, HTTPS/WSS ve kalıcı disk gerekir. `npm ci && npm start` ile çalıştırın; `PORT` barındırma ortamından alınır. Reverse proxy `/ws` için WebSocket upgrade ve Host başlığını korumalıdır. Sağlık kontrolü: `GET /api/health`. `PUBLIC_URL` gerçek HTTPS adresiyse davet bağlantıları bunu kullanır. `ALLOWED_ORIGINS` gerekirse virgülle ayrılan tam origin adresleriyle ayarlanır. `.env.example` örnektir; Node ortam değişkenlerini hizmet yapılandırmasından veya `node --env-file=.env server.mjs` ile yükleyin.
 

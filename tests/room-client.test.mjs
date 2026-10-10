@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {RoomClient} from '../dist/room-client.mjs';
+import {RoomClient,roomSocketUrl} from '../dist/room-client.mjs';
 class Socket extends EventTarget{
  static all=[];
  constructor(url){super();this.url=url;this.readyState=0;this.sent=[];Socket.all.push(this);}
@@ -30,4 +30,21 @@ test('room resume keeps the original token; replacement and storage failures sto
   ws.message({type:'welcome',code:'ABC234',side:1});ws.message({type:'state',rev:9,side:1});ws.message({type:'error',code:'replaced',message:'replaced'});assert.equal(client.stopped,true);assert.equal(client.status,'replaced');assert.equal(client.ws,null);
   client.restore();ws=client.ws;ws.open();ws.message({type:'welcome',code:'ABC234',side:1});ws.message({type:'error',code:'storage',message:'disk failure'});assert.equal(client.stopped,true);assert.equal(client.status,'failed');
  }finally{first.stop();client?.stop();globalThis.location=old;}
+});
+test('static hosting uses the configured secure room server and isolates its player credentials',()=>{
+ const old=globalThis.location;globalThis.location={protocol:'https:',host:'hero.vercel.app'};
+ const memory=storage(),first=new RoomClient({storage:memory,Socket,serverOrigin:'https://rooms.example'});let resumed,other;
+ try{
+  first.begin('create','A');const ws=first.ws;assert.equal(ws.url,'wss://rooms.example/ws');ws.open();const auth=ws.sent[0].token;ws.message({type:'welcome',code:'ABC234',side:0});first.stop();
+  resumed=new RoomClient({storage:memory,Socket,serverOrigin:'https://rooms.example'});assert.equal(resumed.restore(),true);resumed.ws.open();assert.equal(resumed.ws.sent[0].token,auth);
+  other=new RoomClient({storage:memory,Socket,serverOrigin:'https://different.example'});assert.equal(other.restore(),false);assert.equal(other.session,null);
+  assert.throws(()=>roomSocketUrl('http://rooms.example'),/HTTPS/);
+ }finally{first.stop();resumed?.stop();other?.stop();globalThis.location=old;}
+});
+test('an unconfigured static deployment never opens or endlessly retries a missing WebSocket endpoint',()=>{
+ const old=globalThis.location;globalThis.location={protocol:'https:',host:'hero.vercel.app'};
+ const memory=storage();memory.setItem('nexus-room-v1',JSON.stringify({type:'resume',token:'a'.repeat(64),code:'ABC234'}));
+ const errors=[],count=Socket.all.length,client=new RoomClient({storage:memory,Socket,serverOrigin:null,onError:e=>errors.push(e)});
+ try{assert.equal(client.restore(),false);assert.equal(client.begin('create','A'),false);assert.equal(Socket.all.length,count);assert.equal(client.session,null);assert.equal(client.stopped,true);assert.match(errors[0],/oda sunucusu/);}
+ finally{client.stop();globalThis.location=old;}
 });

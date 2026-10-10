@@ -1,17 +1,25 @@
+import {ROOM_SERVER_ORIGIN} from './deployment.mjs?v=9';
 const SESSION_KEY='nexus-room-v1';
+export function roomSocketUrl(origin=ROOM_SERVER_ORIGIN,page=location){
+ if(origin===null)return null;
+ const url=new URL('/ws',origin||`${page.protocol}//${page.host}`);
+ if(!['http:','https:'].includes(url.protocol))throw Error('Oda sunucusu adresi geçersiz.');
+ if(page.protocol==='https:'&&url.protocol!=='https:')throw Error('Oda sunucusu güvenli HTTPS kullanmalı.');
+ url.protocol=url.protocol==='https:'?'wss:':'ws:';return url.href;
+}
 const token=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),n=>n.toString(16).padStart(2,'0')).join('');
 export class RoomClient{
- constructor({onState,onStatus,onError,onLeft,storage=sessionStorage,Socket=WebSocket}={}){
-  Object.assign(this,{onState,onStatus,onError,onLeft,storage,Socket});this.status='idle';this.snapshot=null;this.pending=null;this.retry=0;this.stopped=true;
-  try{this.session=JSON.parse(storage.getItem(SESSION_KEY));if(!this.session?.token||!this.session.type)this.session=null;}catch{this.session=null;}
+ constructor({onState,onStatus,onError,onLeft,storage=sessionStorage,Socket=WebSocket,serverOrigin=ROOM_SERVER_ORIGIN}={}){
+  Object.assign(this,{onState,onStatus,onError,onLeft,storage,Socket});this.url=roomSocketUrl(serverOrigin);this.sessionKey=serverOrigin?`${SESSION_KEY}:${this.url}`:SESSION_KEY;this.status='idle';this.snapshot=null;this.pending=null;this.retry=0;this.stopped=true;
+  try{this.session=this.url?JSON.parse(storage.getItem(this.sessionKey)):null;if(!this.session?.token||!this.session.type)this.session=null;}catch{this.session=null;}
  }
  setStatus(s){this.status=s;this.onStatus?.(s);}
- remember(){try{this.storage.setItem(SESSION_KEY,JSON.stringify(this.session));}catch{this.onError?.('Bu tarayıcı oturumu saklayamıyor. Sayfayı yenilersen oyuncuna geri dönemeyebilirsin.');}}
- begin(type,name,code){this.stop();this.session={type,name,code:code?.trim().toUpperCase(),token:token()};this.snapshot=null;this.remember();this.stopped=false;this.connect();}
+ remember(){try{this.storage.setItem(this.sessionKey,JSON.stringify(this.session));}catch{this.onError?.('Bu tarayıcı oturumu saklayamıyor. Sayfayı yenilersen oyuncuna geri dönemeyebilirsin.');}}
+ begin(type,name,code){if(!this.url){this.onError?.('Bu yayında oda sunucusu henüz bağlanmadı. Aynı cihaz veya bot modunda oynayabilirsin.');return false;}this.stop();this.session={type,name,code:code?.trim().toUpperCase(),token:token()};this.snapshot=null;this.remember();this.stopped=false;this.connect();return true;}
  restore(){if(this.session){this.stopped=false;this.connect();return true;}return false;}
  connect(){
   if(this.stopped)return;clearTimeout(this.retryTimer);this.setStatus('connecting');
-  const ws=this.ws=new this.Socket(`${location.protocol==='https:'?'wss:':'ws:'}//${location.host}/ws`);
+  const ws=this.ws=new this.Socket(this.url);
   let welcomed=false;const timer=setTimeout(()=>{if(ws===this.ws&&this.status!=='connected')ws.close();},12000);
   ws.addEventListener('open',()=>{if(ws!==this.ws)return;ws.send(JSON.stringify(this.session));});
   ws.addEventListener('message',event=>{
@@ -45,5 +53,5 @@ export class RoomClient{
   this.onStatus?.(this.status);return true;
  }
  stop(){this.stopped=true;clearTimeout(this.retryTimer);clearTimeout(this.pendingTimer);this.pending=null;if(this.ws){const ws=this.ws;this.ws=null;ws.close();}}
- clear(){this.stop();this.session=null;this.snapshot=null;try{this.storage.removeItem(SESSION_KEY);}catch{}this.setStatus('idle');}
+ clear(){this.stop();this.session=null;this.snapshot=null;try{this.storage.removeItem(this.sessionKey);}catch{}this.setStatus('idle');}
 }

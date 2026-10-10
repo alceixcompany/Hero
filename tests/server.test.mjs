@@ -33,3 +33,13 @@ test('real WebSocket peers synchronize, enforce auth/origin/size/turns and resum
   const fresh=peer(url,origin);peers.push(fresh);await fresh.open;fresh.ws.send('not-json');await fresh.wait(m=>m.type==='error');fresh.ws.send('x'.repeat(5000));await new Promise(resolve=>fresh.ws.once('close',resolve));
  }finally{for(const p of peers)p.ws.terminate();await app.close();}
 });
+test('an external static frontend can use its allowed room backend while other origins stay blocked',async()=>{
+ const frontend='https://hero.vercel.app',app=createGameServer({dataFile:null,allowedOrigins:[frontend]});
+ await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));const url=`ws://127.0.0.1:${app.server.address().port}/ws`,peers=[];
+ try{
+  const a=peer(url,frontend);peers.push(a);await a.open;a.send({type:'create',name:'A',token:token()});const {code}=await a.wait(m=>m.type==='welcome');
+  const b=peer(url,frontend);peers.push(b);await b.open;b.send({type:'join',code,name:'B',token:token()});await b.wait(m=>m.type==='welcome');await a.wait(m=>m.type==='state'&&m.slots[1]?.connected);
+  assert.equal(a.state().code,b.state().code);
+  const denied=peer(url,'https://another.vercel.app');peers.push(denied);await assert.rejects(denied.open,/403/);
+ }finally{for(const p of peers)p.ws.terminate();await app.close();}
+});
