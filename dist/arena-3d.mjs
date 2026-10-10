@@ -1,8 +1,10 @@
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/addons/loaders/GLTFLoader.js';
-import {CameraRig,cameraGoal} from './camera-rig.mjs?v=4';
-import {advanceExchange,retimeExchange} from './arena-motion.mjs?v=4';
-import {hero} from './engine.mjs?v=4';
+import {CameraRig,cameraGoal} from './camera-rig.mjs?v=5';
+import {advanceExchange,retimeExchange} from './arena-motion.mjs?v=5';
+import {hero} from './engine.mjs?v=5';
+import {loadCharacter} from './character-models.mjs?v=5';
+import {profileFor} from './character-profiles.mjs?v=5';
 
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
@@ -65,10 +67,10 @@ export class Arena3D{
  }
  mount(host,labels,hitLabel,game,battle,event,speed,playing=false){
   this.host=host;this.labels=labels;this.hitLabel=hitLabel;this.cameraMode=game.camera||'follow';this.playing=playing;this.battle=battle;if(speed!==this.speed)retimeExchange(this.action,speed,this.reduced);this.speed=speed;this.commandFlash=host.parentElement.querySelector('#arena-command-flash');if(this.renderer.domElement.parentElement!==host){host.appendChild(this.renderer.domElement);this.resizeObserver.disconnect();this.resizeObserver.observe(host);}
-  const key=game.arena+'|'+game.players.flatMap(p=>p.team).join(',');if(key!==this.key){labels.replaceChildren();this.buildEnvironment(game.arena);dispose(this.units);this.actors.clear();game.players.forEach((p,side)=>p.team.forEach((id,i)=>{const actor=makeActor(hero(id),side),n=p.team.length;actor.home.set((side===0?-1:1)*(3.2+(i%2)*2),0,(i-(n-1)/2)*2.25);actor.position.copy(actor.home);actor.goal.copy(actor.home);actor.group.position.copy(actor.home);actor.rig.rotation.y=actor.yaw;this.units.add(actor.group,actor.trail);this.actors.set(id,actor);}));this.key=key;this.lastEvent=null;this.clearEffects();this.action=null;this.shotFocus=null;}
+  const key=game.arena+'|'+game.players.flatMap(p=>p.team).join(',');if(key!==this.key){labels.replaceChildren();this.buildEnvironment(game.arena);this.actors.forEach(a=>a.model?.dispose());dispose(this.units);this.actors.clear();game.players.forEach((p,side)=>p.team.forEach((id,i)=>{const actor=makeActor(hero(id),side),n=p.team.length;actor.home.set((side===0?-1:1)*(3.2+(i%2)*2),0,(i-(n-1)/2)*2.25);actor.position.copy(actor.home);actor.goal.copy(actor.home);actor.group.position.copy(actor.home);actor.rig.rotation.y=actor.yaw;this.units.add(actor.group,actor.trail);this.actors.set(id,actor);this.loadActorModel(actor);}));this.key=key;this.lastEvent=null;this.clearEffects();this.action=null;this.shotFocus=null;}
   this.game=game;this.actors.forEach(actor=>{
-   const f=battle?.fighters[actor.side].find(f=>f.id===actor.id);actor.hp=f?.hp??1;actor.maxHp=f?.maxHp??1;actor.shield.visible=(f?.shield??0)>0;
-   if(this.currentBattle!==battle){actor.dead=0;actor.rig.rotation.z=0;actor.position.copy(actor.home);actor.goal.copy(actor.home);actor.group.position.copy(actor.home);actor.trailPoints=[];}
+   const f=battle?.fighters[actor.side].find(f=>f.id===actor.id);if(this.currentBattle===battle&&actor.hp>0&&f?.hp===0)actor.pendingDeathEvent=event;actor.hp=f?.hp??1;actor.maxHp=f?.maxHp??1;actor.shield.visible=(f?.shield??0)>0;
+   if(this.currentBattle!==battle){actor.pendingDeathEvent=null;actor.dead=0;actor.rig.rotation.z=0;actor.position.copy(actor.home);actor.goal.copy(actor.home);actor.group.position.copy(actor.home);actor.trailPoints=[];}
    if(actor.label?.parentElement!==labels){
     const label=document.createElement('button');label.type='button';label.dataset.action='arena-focus';label.dataset.id=actor.id;label.dataset.side=1-actor.side;
     const title=document.createElement('b');title.textContent=hero(actor.id).name;
@@ -91,6 +93,15 @@ export class Arena3D{
   if(w!==this.renderWidth||h!==this.renderHeight){this.renderWidth=w;this.renderHeight=h;this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();}
  }
  isAnimating(){return !!this.action&&this.action.elapsed<this.action.duration;}
+ loadActorModel(actor){
+  loadCharacter(actor.id).then(model=>{
+   if(this.actors.get(actor.id)!==actor){model.dispose();return;}
+   actor.rig.children.forEach(child=>child.visible=false);
+   actor.group.children.forEach(child=>{if(child!==actor.rig&&child!==actor.pad&&child!==actor.shield)child.visible=false;});
+   actor.model=model;actor.rig.add(model.object);actor.scale=profileFor(actor.id).height/2.4;actor.rig.scale.setScalar(actor.scale);
+   if(actor.label)actor.label.dataset.model='rigged';
+  }).catch(error=>{if(actor.label)actor.label.dataset.model='fallback';console.warn('Character model unavailable',actor.id,error);});
+ }
  finishExchange(){if(this.action)this.action.finishWhilePaused=true;}
  pause(){cancelAnimationFrame(this.frame);this.frame=0;this.resizeObserver.disconnect();}
  resume(){if(this.frame)return;this.prev=performance.now();this.frame=requestAnimationFrame(t=>this.update(t));}
@@ -152,14 +163,15 @@ export class Arena3D{
    const moving=before.distanceTo(a.position)/Math.max(.001,dt),foes=[...this.actors.values()].filter(o=>o.side!==a.side&&o.hp>0),foe=foes.reduce((n,o)=>!n||o.position.distanceTo(a.position)<n.position.distanceTo(a.position)?o:n,null);
    const yaw=foe?Math.atan2(foe.position.x-a.position.x,foe.position.z-a.position.z):a.yaw;const delta=Math.atan2(Math.sin(yaw-a.rig.rotation.y),Math.cos(yaw-a.rig.rotation.y));a.rig.rotation.y+=delta*Math.min(1,dt*5);a.rig.rotation.x=0;a.rig.rotation.z=0;
    a.lift+=(alive?a.altitude-a.lift:-a.lift)*Math.min(1,dt*2);if(a.id==='antman')a.rig.scale.setScalar(a.scale);const hover=a.flight&&alive&&!this.reduced?Math.sin(this.time*2.2+a.phase)*.11:0;
-   a.rig.position.y=(SUITS[a.id][2]==='chair'?-.35:0)+a.lift+hover;
+   a.rig.position.y=(SUITS[a.id][2]==='chair'&&!a.model?-.35:0)+a.lift+hover;
    a.shield.position.y=1.15+a.lift;a.shield.rotation.y=this.time*.4;
    a.arms.forEach((arm,i)=>{arm.joint.rotation.x=(a.flight?-.28:-.08)+Math.sin(this.time*1.7+i+a.phase)*.08;arm.elbow.rotation.x=-.25;});
    a.legs.forEach((l,i)=>{l.joint.rotation.x=SUITS[a.id][2]==='chair'?-1.15:a.flight?.15:!this.reduced?Math.sin(this.time*6+a.phase+i*Math.PI)*Math.min(.45,moving*.65):0;l.knee.rotation.x=a.flight?.2:Math.max(0,Math.sin(this.time*6+a.phase+i*Math.PI))*.12;});
    if(a.cape&&!this.reduced){a.cape.rotation.x=-.17-(a.flight?.22:0)+Math.sin(this.time*3+a.phase)*.08;a.cape.rotation.z=Math.sin(this.time*2+a.phase)*.07;}
    a.wings.forEach((w,i)=>{w.rotation.z=(i?1:-1)*(.25+Math.sin(this.time*(a.id==='wasp'?30:3))* (a.id==='wasp'?.65:.12));});
    a.jets.forEach(j=>{j.visible=alive;j.scale.y=.85+Math.sin(this.time*24+a.phase)*.15;});a.pad.material.opacity=.22+Math.sin(this.time*2+a.phase)*.06;a.pad.scale.setScalar(1+a.lift*.15);
-   const waitingDeath=action&&p<.5&&(a===action.target||action.event.special);if(!alive&&!waitingDeath){a.dead=Math.min(1,a.dead+dt*2);a.rig.rotation.z=a.dead*(a.side===0?1:-1)*1.5;a.rig.position.y-=a.dead*.85;a.pad.visible=false;}else if(alive){a.dead=0;a.pad.visible=true;}
+   const waitingDeath=action&&p<.5&&a.pendingDeathEvent===action.event;if(!alive&&!waitingDeath){a.dead=Math.min(1,a.dead+dt*2);if(!a.model){a.rig.rotation.z=a.dead*(a.side===0?1:-1)*1.5;a.rig.position.y-=a.dead*.85;}a.pad.visible=false;}else if(alive){a.dead=0;a.pad.visible=true;}
+   a.model?.update({dt,playing:this.playing||!!action?.finishWhilePaused,moving,flight:a.flight,event:action?.event,role:action?.attacker===a?'attacker':action?.target===a?'target':null,progress:p,dead:!alive&&!waitingDeath});
   });
   const narrow=this.camera.aspect<1.25;
   const goal=cameraGoal(this.cameraMode,this.camera.aspect,this.reduced?null:this.shotFocus);

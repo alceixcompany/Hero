@@ -24,7 +24,7 @@ Tarayıcı: http://127.0.0.1:5173. Motor testleri: `npm test`.
 
 ## Motor
 
-`dist/engine.mjs` DOM'dan bağımsız kuralları içerir. `dist/auction-ui.mjs` gelecek lotların kimliğini arayüze aktarmadan gizler. `dist/arena-3d.mjs`, Three.js ile 30 karakter için prosedürel 3B figürler, üç arena, ışık, gölge, yürüyüş/yumruk hareketleri, enerji mermileri, ışın/yıldırım, kalkan ve darbe efektleri çizer. `dist/arena-ui.mjs` savaş panellerini, `dist/app.mjs` oynatımı yönetir. Three.js 0.180.0 çalışma dosyaları `dist/vendor/` içinde yereldir; lisansı yanında bulunur. Doğrudan statik barındırılabilir.
+`dist/engine.mjs` DOM'dan bağımsız kuralları içerir. `dist/auction-ui.mjs` gelecek lotların kimliğini arayüze aktarmadan gizler. `dist/arena-3d.mjs`, Three.js ile hazır iskeletli karakter modelleri, üç arena, ışık, gölge, enerji mermileri, ışın/yıldırım, kalkan ve darbe efektleri çizer. `dist/arena-ui.mjs` savaş panellerini, `dist/app.mjs` oynatımı yönetir. Three.js 0.180.0 çalışma dosyaları `dist/vendor/` içinde yereldir; lisansı yanında bulunur. Doğrudan statik barındırılabilir.
 
 Can: 65 + dayanıklılık × 12. Temel saldırı: güç × 1.5 + enerji × 1.15 + teknoloji × 0.65 + zekâ × 0.4 + 7. Uyum saldırıya eklenir; dayanıklılık normalde ×0.9, delici saldırıda ×0.3 hasar azaltır. Kritik ×1.5; özel hamle ×1.25. Hız ve zekâ hamle sırasına, hız farkı %2–16 kaçışa etki eder. Şans her vuruşta kritik ve hasar sapması yaratır. Hedefler yaşayan rakiplerden rastgele seçilir. 40 tur sınırında kalan can / başlangıç can oranı sonucu belirler.
 
@@ -54,3 +54,11 @@ Arayüz güncellenirken `arena-dom.mjs` 3B tuvali, etiketleri ve efekt katmanlar
 Sıradaki hamle şeridi yalnızca gerçek savaş kuyruğunu gösterir; gelecek turun rastgele sırasını önceden hesaplamaz. Üçüncü kişisel saldırıya hazırlanan kahramanlar `ÖZEL HAZIR` etiketi alır. Arena etiketine tıklamak karşı takımın o kahramana odaklanmasını sağlar. Darbe kartı saldıran/hedef portrelerini, hasarı, kalkanın emdiği miktarı ve saldırı ilerlemesini gösterir. Ses açıksa darbe anında yakın / menzilli vuruşa uygun kısa sentez ses çalınır.
 
 Kısayollar: Boşluk duraklat / devam et; sağ ok duraklatılmışken tek hamle; 1/2/3 oyuncu 1 güç/kalkan/can komutları; 7/8/9 oyuncu 2 komutları. Form, hedef seçimi ve modal açıkken kısayollar devre dışıdır. Bot tarafına oyuncu komutu verilemez. Hız kontrolleri arena içinde de bulunduğundan tam ekran görünümünde kullanılabilir.
+
+## Arena v5 — iskeletli kahramanlar
+
+[Quaternius Universal Base Characters](https://quaternius.com/packs/universalbasecharacters.html) Standard paketinin erkek/kadın gövdeleri, saç ve sakal modelleri ile [Universal Animation Library](https://quaternius.com/packs/universalanimationlibrary.html) animasyonları kullanılır. Bunlar CC0 varlıklardır; resmî Marvel veya film modelleri değildir. 30 karakterin kostümü, boyu, eni, saç rengi ve ekipmanı `character-profiles.mjs` / `character-models.mjs` içinde uyarlanır. Thor'un çekici, Captain America'nın kalkanı, Wolverine'in pençeleri, Falcon/Wasp kanatları, Rocket kuyruğu, Groot dalları ve Professor X sandalyesi kemikleri takip eder.
+
+65 kemikli gövdeler GLB olarak yüklenir. 14 hazır klip; bekleme, yürüme, yumruk, kılıç, ateş, büyü, darbe, kaçış ve elenme hareketlerini sağlar. Her savaşçı ve önizleme bağımsız iskelet/mixer kullanır; önizlemeyi kapatmak arenayı etkilemez. Professor X saldırırken oturma pozu korunur. Model yüklenemezse arenada mevcut figür yedek olarak kalır.
+
+Karakter detaylarındaki **3B modeli incele** düğmesi büyük bir vitrin açar: sürükleyerek döndür, Hazır / Yürü / Saldır animasyonlarını seç, Portre'ye dön. Vitrin kapatıldığında renderer ve model kaynakları bırakılır. Dosyalar yereldir; yaklaşık 3 MB ortak model/animasyon indirmesi önbellekte paylaşılır. Kaynaklar, lisanslar ve SHA-256 kayıtları `dist/assets/characters/` içindedir. Paketleme adımı `python3 tools/prepare-characters.py BASE_PACK.zip ANIMATION_LIBRARY.glb` ile tekrarlanabilir. `npm test` bütün 30 modeli, bağımsız iskeletleri ve elenme pozunun sonraki saldırılarda korunmasını da doğrular.

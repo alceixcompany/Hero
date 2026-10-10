@@ -1,8 +1,10 @@
-import {HEROES,STAT_LABELS,ARENAS,hero,newGame,bid,pass,canBid,botDecision,synergy,createBattle,battleStep,battleCommand,botBattleCommand,setTactic,focusTarget} from './engine.mjs?v=4';
-import {auctionLots} from './auction-ui.mjs?v=4';
-import {arenaMarkup} from './arena-ui.mjs?v=4';
-import {patchArenaPage} from './arena-dom.mjs?v=4';
-import {Arena3D} from './arena-3d.mjs?v=4';
+import {HEROES,STAT_LABELS,ARENAS,hero,newGame,bid,pass,canBid,botDecision,synergy,createBattle,battleStep,battleCommand,botBattleCommand,setTactic,focusTarget} from './engine.mjs?v=5';
+import {auctionLots} from './auction-ui.mjs?v=5';
+import {arenaMarkup} from './arena-ui.mjs?v=5';
+import {patchArenaPage} from './arena-dom.mjs?v=5';
+import {Arena3D} from './arena-3d.mjs?v=5';
+import {CharacterPreview} from './character-preview.mjs?v=5';
+let characterPreview=null;
 const app=document.querySelector('#app'),modal=document.querySelector('#modal');
 const icons={bolt:'<path d="m13 2-9 12h7l-1 8 10-12h-7z"/>',arrow:'<path d="M5 12h14m-6-6 6 6-6 6"/>',coin:'<circle cx="12" cy="12" r="9"/><path d="M14.5 8.5h-3a2 2 0 0 0 0 4h1a2 2 0 0 1 0 4h-3M12 6v12"/>',shield:'<path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z"/>',cross:'<path d="m6 6 12 12M18 6 6 18"/>',refresh:'<path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1"/>',book:'<path d="M12 5v15M3 4c4-1 6 0 9 1 3-1 5-2 9-1v15c-4-1-6 0-9 1-3-1-5-2-9-1z"/>',sound:'<path d="M4 9v6h4l5 4V5L8 9zM17 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/>',play:'<path d="m8 5 12 7-12 7z"/>',pause:'<path d="M8 5v14M16 5v14"/>',check:'<path d="m5 12 4 4L19 6"/>',star:'<path d="m12 3 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/>'};
 const icon=(name)=>`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.bolt}</svg>`;
@@ -57,8 +59,8 @@ function render(){
  scheduleBot();
 }
 
-function showModal(content,cls=''){modal.className=cls;modal.innerHTML=`<button class="modal-close icon-button" data-action="close" aria-label="Kapat">${icon('cross')}</button>${content}`;if(!modal.open)modal.showModal();}
-function detail(id){const h=hero(id);if(!h)return;showModal(`<div class="detail-art">${portrait(h)}<div class="art-shade"></div><div class="art-caption"><span>${h.group.toUpperCase()}</span><h2>${h.name}</h2><p>${h.alias}</p></div></div><div class="detail-content"><div class="eyebrow">${h.type.toUpperCase()} · ${h.rating} GENEL PUAN</div><h2>${h.skill}</h2><p>${h.desc}</p><div class="stats">${h.stats.map((v,i)=>`<div class="stat"><span>${STAT_LABELS[i]}</span><div class="stat-track"><i style="width:${v*10}%"></i></div><b>${v}<small>/10</small></b></div>`).join('')}</div><div class="detail-tip">Özel yetenek her 3. saldırıda devreye girer. Aynı gruptan her ek kahraman +%4 takım uyumu sağlar (en fazla %12).</div></div>`,'detail-modal');}
+function showModal(content,cls=''){characterPreview?.dispose();characterPreview=null;modal.className=cls;modal.innerHTML=`<button class="modal-close icon-button" data-action="close" aria-label="Kapat">${icon('cross')}</button>${content}`;if(!modal.open)modal.showModal();}
+function detail(id){const h=hero(id);if(!h)return;showModal(`<div class="detail-art">${portrait(h)}<div class="art-shade"></div><div class="art-caption"><span>${h.group.toUpperCase()}</span><h2>${h.name}</h2><p>${h.alias}</p></div></div><div class="detail-content"><div class="eyebrow">${h.type.toUpperCase()} · ${h.rating} GENEL PUAN</div><h2>${h.skill}</h2><p>${h.desc}</p><div class="stats">${h.stats.map((v,i)=>`<div class="stat"><span>${STAT_LABELS[i]}</span><div class="stat-track"><i style="width:${v*10}%"></i></div><b>${v}<small>/10</small></b></div>`).join('')}</div><div class="detail-tip">Özel yetenek her 3. saldırıda devreye girer. Aynı gruptan her ek kahraman +%4 takım uyumu sağlar (en fazla %12).</div><button class="outline model-open" data-action="view-model" data-id="${h.id}">3B modeli incele ↗</button></div>`,'detail-modal');}
 function rules(){showModal(`<div class="modal-inner"><div class="eyebrow">NEXUS OYUN REHBERİ</div><h2>Tekliften zafere.</h2><div class="rule"><b>01</b><div><h3>20 coin ile başla.</h3><p>İki oyuncu aynı cihazdan sırayla oynar; istersen botu seç. 30 karakterden 10’u her oyunda rastgele gelir. Sıradaki karakterler gizlidir; yalnızca teklif sırası geldiğinde açılır.</p></div></div><div class="rule"><b>02</b><div><h3>En iyi teklif kahramanı alır.</h3><p>Teklif en az 1 coin artar. Rakip pas geçince liderin teklifi ödenir. Teklif yokken iki pas karakteri atlar. Takım sınırı 5; coinsiz veya dolu takım pas geçer. Hiç karakter alamayan oyuncuya, sonunda satılmamış bir karakter ücretsiz verilir.</p></div></div><div class="rule"><b>03</b><div><h3>Güç, tek başına yetmez.</h3><p>Güç, enerji, teknoloji ve zekâ saldırıyı; dayanıklılık canı ve savunmayı; hız hamle sırasını ve kaçışı etkiler. Aynı gruptan ek karakter +%4 saldırı uyumu sağlar (en fazla %12).</p></div></div><div class="rule"><b>04</b><div><h3>Arenada söz sahibi ol.</h3><p>Savaşta takım duruşunu ve hedefini seç; enerji biriktirerek güç patlaması, takım kalkanı veya ikinci nefes komutu ver. Komutlar arasında 3 takım hamlesi, duruş değişimleri arasında 2 takım hamlesi gerekir. Özel yetenekler her 3. saldırıda çalışır. Şans ayarı kritik vuruş ihtimalini ve ±hasar sapmasını belirler; kritik hasar ×1,5. Hızdan gelen kaçış %2–16 arasındadır; savunma duruşu buna 4 yüzde puan ekler. Arena bonusu %10. Son ayakta kalan takım kazanır; 40 turda sonuç yoksa kalan toplam can oranı karşılaştırılır.</p></div></div><button class="primary" data-action="close">Anladım, başlayalım ${icon('arrow')}</button></div>`);}
 function setup(){showModal(`<form id="setup-form" class="modal-inner"><div class="eyebrow">YENİ BİR MÜCADELE</div><h2>Kimler arenaya çıkıyor?</h2><p>Her yeni oyunda kahramanlar yeniden karıştırılır.</p><div class="mode-options"><label><input type="radio" name="mode" value="local" ${game.mode==='local'?'checked':''}><span>Arkadaşınla oyna<small>Aynı cihazda 2 oyuncu</small></span></label><label><input type="radio" name="mode" value="bot" ${game.mode==='bot'?'checked':''}><span>Bota karşı oyna<small>Stratejini tek başına dene</small></span></label></div><label class="form-label">Oyuncu 1<input name="p1" maxlength="20" value="${esc(game.players[0].name)}" required></label><label class="form-label">Oyuncu 2<input name="p2" maxlength="20" value="${esc(game.players[1].name)}" required></label><button class="primary" type="submit">20 coin ile başla ${icon('arrow')}</button></form>`);modal.querySelectorAll('[name=mode]').forEach(el=>el.addEventListener('change',()=>{const bot=modal.querySelector('[name=mode]:checked').value==='bot';const p2=modal.querySelector('[name=p2]');p2.value=bot?'Nexus Bot':'Oyuncu 2';p2.readOnly=bot;}));}
 function scheduleBot(){clearTimeout(botTimer);if(game.phase==='auction'&&game.mode==='bot'&&game.turn===1&&!modal.open){botTimer=setTimeout(()=>{const offer=botDecision(game);if(offer===null)pass(game);else bid(game,offer);selectedBid=game.bid+1;save();render();},950);}}
@@ -101,3 +103,18 @@ document.addEventListener('keydown',e=>{
  else if(e.code==='ArrowRight'&&!playing){e.preventDefault();step();}
  else if(['1','2','3','7','8','9'].includes(e.key)){const side=Number(e.key)>3?1:0,id=['overdrive','barrier','rally'][(Number(e.key)-1)%6];activateCommand(side,id);}
 });
+
+function openCharacterModel(id){
+ detail(id);const h=hero(id),art=modal.querySelector('.detail-art');art.classList.add('showcase-art');
+ art.innerHTML=`<div class="model-stage" aria-label="${h.name} model önizlemesi"><span class="model-loading">Kahraman hazırlanıyor…</span></div><div class="model-name"><span>KAHRAMAN VİTRİNİ</span><h2>${h.name}</h2><small>Sürükleyerek döndür</small></div><div class="model-controls" aria-label="Model animasyonu"><button data-action="model-mode" data-id="idle" class="active">Hazır</button><button data-action="model-mode" data-id="walk">Yürü</button><button data-action="model-mode" data-id="attack">Saldır</button><button data-action="model-portrait" data-id="${id}">Portre</button></div>`;
+ modal.querySelector('.model-open').remove();characterPreview=new CharacterPreview(art.querySelector('.model-stage'),h);modal.scrollTop=0;modal.querySelector('.modal-close').focus({preventScroll:true});
+}
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-action]');if(!b||b.disabled)return;
+ if(b.dataset.action==='view-model')openCharacterModel(b.dataset.id);
+ else if(b.dataset.action==='model-portrait')detail(b.dataset.id);
+ else if(b.dataset.action==='model-mode'){
+  characterPreview?.setMode(b.dataset.id);modal.querySelectorAll('[data-action="model-mode"]').forEach(el=>el.classList.toggle('active',el===b));modal.scrollTop=0;
+ }
+});
+modal.addEventListener('close',()=>{characterPreview?.dispose();characterPreview=null;});

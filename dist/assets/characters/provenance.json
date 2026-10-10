@@ -1,0 +1,44 @@
+{
+  "author": "Quaternius",
+  "license": "CC0-1.0",
+  "bases": "https://quaternius.com/packs/universalbasecharacters.html",
+  "base_download": "https://quaternius.itch.io/universal-base-characters",
+  "base_zip_sha256": "fdbf1804c90dfc1ea03e992bff7da2dfd1a79318e13270a660180f9308455f40",
+  "animations": "https://quaternius.com/packs/universalanimationlibrary.html",
+  "animation_mirror": "https://github.com/Seyamalam/blood-league-kickoff/blob/main/public/assets/vendor/quaternius/universal-animation-library.glb",
+  "downloaded": "2026-10-10",
+  "files": {
+    "female.glb": {
+      "bytes": 502456,
+      "sha256": "2eb69752a7bf3c783cb29591de8b3992509d70dbda6090c03ea25f969c34d9d0"
+    },
+    "Hair_Beard.glb": {
+      "bytes": 21524,
+      "sha256": "f3ec71cf4486e5e512364c80efe6cae08825f19dd5e0882f6d64cb8221b81d7d"
+    },
+    "Hair_Buzzed.glb": {
+      "bytes": 17180,
+      "sha256": "8505f7583c7c4043d5c4864e0cc48def1e5d48e0805ce704857cf5c0bd0fbffc"
+    },
+    "Hair_Buns.glb": {
+      "bytes": 104912,
+      "sha256": "2f9eb69c4614c05e77fca6414b24126d2deb8efa901addd9c16d99ae8225fa87"
+    },
+    "male.glb": {
+      "bytes": 482232,
+      "sha256": "e2e6be5067fd4ebc64b042257324b01729ea771d0dd7e05cfedda047e3e9df1f"
+    },
+    "combat.glb": {
+      "bytes": 1742656,
+      "sha256": "1378846905c385456a2b1a72a96dcc15138e24f615466fd4ba0ec9d118e84fae"
+    },
+    "Hair_SimpleParted.glb": {
+      "bytes": 26992,
+      "sha256": "bc63f438e2579c6e11fbea8ed16736d07105a98b1bfb5e1a6711647513ec5c43"
+    },
+    "Hair_Long.glb": {
+      "bytes": 92380,
+      "sha256": "de9e500d8d27e3b933f28c5232205edcc06c62ecf9136213068d719a02acaea7"
+    }
+  }
+}
