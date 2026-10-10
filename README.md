@@ -44,3 +44,13 @@ ImageGen ile 4×3 çizgi roman karakter atlası üretimi denendi; aracın otomat
 - Dengeli / Hücum / Savunma duruşları gerçek savaş formülünü etkiler; değişiklikler arasında 2 takım saldırısı gerekir. Hücum: +%18 saldırı, −%30 dayanıklılıktan gelen hasar azaltma. Savunma: −%10 saldırı, +%25 dayanıklılıktan gelen hasar azaltma, +4 yüzde puan kaçış (üst sınır %20). Duruşlar can miktarını değiştirmez.
 - Hedef seçimi yaşayan belirli bir rakibe odaklanır; hedef elenince otomatik seçime döner. Bot, enerji ve takımın kalan canına göre aynı maliyetlerle komut kullanır.
 - Sinematik, geniş ve yakın kameralar; tam ekranda da çalışan hızlı komutlar; mobil komut panelleri; hareket azaltma tercihi desteği. Konum animasyonları görseldir; hasar, karakter puanları ve taktikler üzerinden hesaplanır. Serbest joystick kontrolü veya fizik tabanlı aksiyon oyunu değildir.
+
+## Arena v4 — kesintisiz kamera ve takip
+
+Sinema modu artık sabit bir tarafta kalır. Her saldırıda odak değişimi yumuşatılır; saldırı sonlarında merkeze ani dönüş, özel saldırılarda otomatik zoom ve kamera sarsıntısı yoktur. Kamera konumu ve bakış noktası kare süresine bağlı olarak ayrı ayrı sönümlenir. Kamera modu ve ekran boyutu değişimleri de geçiş yapar. `camera-rig.mjs` için farklı FPS, hızlı hedef değişimi ve geçiş sınırı regresyon testleri vardır.
+
+Arayüz güncellenirken `arena-dom.mjs` 3B tuvali, etiketleri ve efekt katmanlarını yerinde tutar. Aynı boyutta `renderer.setSize` tekrar çağrılmaz; rAF döngüsü her hamlede yeniden başlatılmaz. Animasyon ilerlemesi aktif kare süresiyle hesaplanır. Duraklatma saldırıyı dondurur; tek hamle animasyonu tamamlar; hız değiştirmek saldırı evresini korur. Otomatik oynatma, düşük FPS'de de mevcut animasyon bitmeden sonraki saldırıyı başlatmaz. Hamle ortasında duraklatılırsa sağ ok / «Hamleyi tamamla» önce bu saldırıyı tamamlar, sonraki basış yeni hamleyi başlatır. Açık kalması istenen yerel geliştirme sunucusu kullanıcı durdurana kadar çalışmaya devam eder.
+
+Sıradaki hamle şeridi yalnızca gerçek savaş kuyruğunu gösterir; gelecek turun rastgele sırasını önceden hesaplamaz. Üçüncü kişisel saldırıya hazırlanan kahramanlar `ÖZEL HAZIR` etiketi alır. Arena etiketine tıklamak karşı takımın o kahramana odaklanmasını sağlar. Darbe kartı saldıran/hedef portrelerini, hasarı, kalkanın emdiği miktarı ve saldırı ilerlemesini gösterir. Ses açıksa darbe anında yakın / menzilli vuruşa uygun kısa sentez ses çalınır.
+
+Kısayollar: Boşluk duraklat / devam et; sağ ok duraklatılmışken tek hamle; 1/2/3 oyuncu 1 güç/kalkan/can komutları; 7/8/9 oyuncu 2 komutları. Form, hedef seçimi ve modal açıkken kısayollar devre dışıdır. Bot tarafına oyuncu komutu verilemez. Hız kontrolleri arena içinde de bulunduğundan tam ekran görünümünde kullanılabilir.
