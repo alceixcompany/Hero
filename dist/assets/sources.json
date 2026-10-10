@@ -1,0 +1,62 @@
+[
+  {
+    "character": "Iron Man",
+    "file": "ironman.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/346-iron-man.jpg"
+  },
+  {
+    "character": "Spider-Man",
+    "file": "spiderman.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/620-spider-man.jpg"
+  },
+  {
+    "character": "Thor",
+    "file": "thor.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/659-thor.jpg"
+  },
+  {
+    "character": "Hulk",
+    "file": "hulk.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/332-hulk.jpg"
+  },
+  {
+    "character": "Doctor Strange",
+    "file": "strange.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/226-doctor-strange.jpg"
+  },
+  {
+    "character": "Black Panther",
+    "file": "panther.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/106-black-panther.jpg"
+  },
+  {
+    "character": "Scarlet Witch",
+    "file": "wanda.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/579-scarlet-witch.jpg"
+  },
+  {
+    "character": "Captain America",
+    "file": "captain.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/149-captain-america.jpg"
+  },
+  {
+    "character": "Black Widow",
+    "file": "widow.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/107-black-widow.jpg"
+  },
+  {
+    "character": "Loki",
+    "file": "loki.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/414-loki.jpg"
+  },
+  {
+    "character": "Captain Marvel",
+    "file": "marvel.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/157-captain-marvel.jpg"
+  },
+  {
+    "character": "Hawkeye",
+    "file": "hawkeye.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/313-hawkeye.jpg"
+  }
+]
