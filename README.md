@@ -137,3 +137,14 @@ docker compose up --build -d
 `rooms` volume oda durumlarını yeniden başlatmalar arasında tutar. HTTPS’i reverse proxy üzerinden sağlayın. **Tek uygulama instance/replica çalıştırın.** Oda durumu tek süreçte ve tek diskte tutulur; çoklu sunucu için ortak veri deposu ve dağıtık oda yönlendirmesi eklenmelidir. Kalıcı disksiz bir yayında sunucu yeniden oluşturulursa odalar kaybolur. Oda kodu hesabın yerini tutmaz: bağlantıyı yalnızca oynamasını istediğiniz kişiyle paylaşın; odaya üçüncü oyuncu alınmaz. Sekmenin oturum verisini temizlerseniz sunucu oyuncu anahtarınızı yeniden vermez.
 
 Testler: `npm test`. Oda testleri eşzamanlı/eski/tekrarlanan istekleri, gizli lotları, yetkileri, süre/kopma/geri dönüşü, sunucu yeniden başlatmasını, dosya izinlerini, gerçek WebSocket bağlantılarını, Origin/paket sınırlarını, ortak sonucu ve rövanşı doğrular. GitHub Actions Node 22/24 üzerinde bunları çalıştırır.
+
+### Gizli savaş planı ve arena bölgeleri
+
+Açık artırma tamamlanınca savaş planı modalı açılır. Bir kahraman seçip altı konumdan birine dokunarak yerleştirin; dolu konuma yerleştirmek iki kahramanın konumunu değiştirir. Her kahramana hücum, avcı veya koruma görevi verilebilir. Diziliş savaşta değiştirilemez. Aynı cihazda ilk plan kilitlenince cihaz devir ekranı çıkar; bot kendi planını hazırlar. Çevrimiçi oyunda sunucu, iki oyuncu da kilitleyene kadar rakibin planını snapshot'a eklemez; iki onay aynı savaş durumunu başlatır. Henüz rakip onaylamadıysa kendi planınızın kilidini açabilirsiniz. Yenileme sonrası kilitli çevrimiçi plan geri gelir. Rövanşta iki oyuncu da tekrar planlayabilir.
+
+- Ön saf, normal yakın dövüşçülerin arka sıraya saldırmasını engeller; ön saf düşünce arka sıra açılır. Menzilli saldırılarda yaşayan ön saf, arka sıraya %20 koruma sağlar. Hız 8+ veya uçuşa sahip avcılar bu korumayı aşabilir. Hedef seçimi ön saf kuralını kaldırmaz.
+- Avcı, erişebildiği en düşük can oranındaki hedefe yönelir; saldırısı %8 azalır. Koruma görevi saldırıyı %15 azaltır; kahraman tur başına bir defa komşusunun doğrudan hasarının %30'unu üstlenir. Kalkanı bu payı emebilir; elenen koruyucu tekrar kalkmaz.
+- Siper, menzilli doğrudan hasarı %20 azaltırken saldırıyı %8 azaltır. Açık alan hem saldırıyı hem doğrudan alınan hasarı %8 artırır. Yüksek platform menzilli saldırıyı %8, uçabilen menzilli kahramanda %12 artırır; yerdeki kahramanların girişimini 1 azaltır.
+- Yatay/dikey komşu ikililer her ikinci ortak saldırıda +1 ek yük kazanır. Kişisel alan yetenekleri hedefin komşularına yayılır ve siperi aşar; mevcut ikili alan etkileri tüm diğer yaşayan rakiplere yayılmaya devam eder.
+
+Arena modelleri bu konumlara yerleşir: siperler, basamaklı platformlar, koruma bağlantısı ve avcıların kavisli yaklaşması seçimleri görünür kılar. Ekran etiketleri birbirini kapatmamak için yerleştirilir; görsel hareket savaş hesabından bağımsızdır. Yerel WebSocket odaları ve Vercel Redis odaları aynı kuralları kullanır.

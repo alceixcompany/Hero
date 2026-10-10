@@ -1,3 +1,4 @@
+import {validPlan,resolvedPlan} from './dist/strategy.mjs';
 import {randomBytes,createHash,randomInt} from 'node:crypto';
 import {mkdirSync,readFileSync,writeFileSync,renameSync,chmodSync} from 'node:fs';
 import {dirname} from 'node:path';
@@ -73,6 +74,7 @@ export class RoomStore{
   const game=clone(r.game);
   game.pool=game.pool.map((id,i)=>r.status==='lobby'||i>game.round&&game.phase!=='ready'?null:id);
   game.camera='follow';
+  if((r.status!=='battle'||r.battle?.done)&&game.plans)game.plans=game.plans.map((p,i)=>i===side?p:null);
   return {type:'state',code:r.code,side,rev:r.rev,status:r.status,game,battle:r.battle?clone(r.battle):null,matchId:r.matchId,playing:r.playing&&this.allConnected(r)&&!r.pauseUntil,speed:r.speed,deadline:r.deadline,remaining:r.remaining,serverNow:this.now(),pauseUntil:r.pauseUntil,slots:r.slots.map(s=>s?{name:s.name,ready:s.ready,connected:s.connected,lastSeen:s.lastSeen}:null),auctionBids:clone(r.auctionBids.slice(-60)),notice:r.notice,closedWinner:r.closedWinner??null,resultAt:r.resultAt??0};
  }
  apply(r,side,{id,rev,action,data={}}={}){
@@ -110,11 +112,13 @@ export class RoomStore{
     r.slots.forEach(s=>s.ready=false);
    }else if(action==='battle-ready'){
     if(r.status!=='ready')fail('Önce açık artırmayı tamamla.');
-    r.slots[side].ready=!r.slots[side].ready;
+    if(data.plan!==undefined&&!validPlan(r.game.players[side].team,data.plan))fail('Her kahramana farklı bir konum ve geçerli bir görev seç.');
+    r.game.plans??=[null,null];
+    if(!r.slots[side].ready){r.game.plans[side]=resolvedPlan(r.game.players[side].team,data.plan??r.game.plans[side],hero);r.slots[side].ready=true;}else r.slots[side].ready=false;
     if(r.slots.every(s=>s.ready))this.startBattle(r);
    }else if(action==='rematch'){
     if(!r.battle?.done||r.status!=='battle')fail('Mücadele henüz bitmedi.');
-    r.slots[side].ready=true;if(r.slots.every(s=>s.ready))this.startBattle(r);
+    if(data.plan!==undefined&&!validPlan(r.game.players[side].team,data.plan))fail('Diziliş geçersiz.');r.game.plans??=[null,null];r.game.plans[side]=resolvedPlan(r.game.players[side].team,data.plan??r.game.plans[side],hero);r.slots[side].ready=true;if(r.slots.every(s=>s.ready))this.startBattle(r);
    }else if(['command','tactic','focus'].includes(action)){
     if(r.status!=='battle'||r.battle.done||r.pauseUntil)fail('Aktif mücadele bekleniyor.');
     const ok=action==='command'?battleCommand(r.battle,side,data.id):action==='tactic'?setTactic(r.battle,side,data.id):focusTarget(r.battle,side,data.id??null);
