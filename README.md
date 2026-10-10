@@ -11,7 +11,8 @@ Tarayıcı: http://127.0.0.1:5173. Motor testleri: `npm test`.
 ## Oyun
 
 - Aynı cihazda iki oyuncu veya bot rakip, kişi başı 20 coin.
-- 12 Marvel karakterinden rastgele 10 karakter; takım başına en fazla 5 üye.
+- 30 Marvel karakterinden rastgele 10 karakter; takım başına en fazla 5 üye.
+- Gelecek karakterler kapalı kart olarak görünür; isim, portre ve detay bağlantısı yalnızca lot başladığında açılır.
 - Sırayla artan teklifler, pas ile satış, sadece kazanan teklifin tahsil edilmesi.
 - İki ilk pas satış olmadan lotu geçer. Hiç üyesi olmayan takıma açık artırma sonunda satılmamış bir karakter ücretsiz verilir.
 - Karakter arşivi, iki karakter karşılaştırması, 6 özellik ve karaktere özel yetenekler.
@@ -23,11 +24,11 @@ Tarayıcı: http://127.0.0.1:5173. Motor testleri: `npm test`.
 
 ## Motor
 
-`dist/engine.mjs` DOM'dan bağımsız kuralları içerir. `dist/app.mjs` arayüz ve oynatımı, `dist/style.css` duyarlı tasarımı içerir. Doğrudan statik barındırılabilir.
+`dist/engine.mjs` DOM'dan bağımsız kuralları içerir. `dist/auction-ui.mjs` gelecek lotların kimliğini arayüze aktarmadan gizler. `dist/arena-3d.mjs`, Three.js ile 30 karakter için prosedürel 3B figürler, üç arena, ışık, gölge, yürüyüş/yumruk hareketleri, enerji mermileri, ışın/yıldırım, kalkan ve darbe efektleri çizer. `dist/arena-ui.mjs` savaş panellerini, `dist/app.mjs` oynatımı yönetir. Three.js 0.180.0 çalışma dosyaları `dist/vendor/` içinde yereldir; lisansı yanında bulunur. Doğrudan statik barındırılabilir.
 
 Can: 65 + dayanıklılık × 12. Temel saldırı: güç × 1.5 + enerji × 1.15 + teknoloji × 0.65 + zekâ × 0.4 + 7. Uyum saldırıya eklenir; dayanıklılık normalde ×0.9, delici saldırıda ×0.3 hasar azaltır. Kritik ×1.5; özel hamle ×1.25. Hız ve zekâ hamle sırasına, hız farkı %2–16 kaçışa etki eder. Şans her vuruşta kritik ve hasar sapması yaratır. Hedefler yaşayan rakiplerden rastgele seçilir. 40 tur sınırında kalan can / başlangıç can oranı sonucu belirler.
 
-Puanlar oyuna özel dengeleme değerleridir; resmî Marvel sıralaması değildir. İlk oynanabilir sürüm aynı cihazda çalışır; çevrimiçi oda sunucusu ve 3B animasyon yoktur. Arena, portre kartları, vuruş animasyonları ve can barlarıyla mücadeleyi gösterir.
+Puanlar oyuna özel dengeleme değerleridir; resmî Marvel sıralaması değildir. İlk oynanabilir sürüm aynı cihazda çalışır; çevrimiçi oda sunucusu yoktur. Arena artık stilize 3B figürlerle mücadeleyi gösterir; fotoğraf gerçekçiliğinde film modelleri kullanmaz. Geniş/yakın kamera ve tam ekran mevcuttur. WebGL açılamayan cihazlarda takım panelleri ve günlük oynanabilir kalır.
 
 ## Görseller
 

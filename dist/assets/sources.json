@@ -58,5 +58,95 @@
     "character": "Hawkeye",
     "file": "hawkeye.jpg",
     "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/313-hawkeye.jpg"
+  },
+  {
+    "character": "Wasp",
+    "file": "wasp.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/708-wasp.jpg"
+  },
+  {
+    "character": "Punisher",
+    "file": "punisher.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/530-punisher.jpg"
+  },
+  {
+    "character": "Daredevil",
+    "file": "daredevil.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/201-daredevil.jpg"
+  },
+  {
+    "character": "Professor X",
+    "file": "professor.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/527-professor-x.jpg"
+  },
+  {
+    "character": "War Machine",
+    "file": "warmachine.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/703-war-machine.jpg"
+  },
+  {
+    "character": "Wolverine",
+    "file": "wolverine.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/717-wolverine.jpg"
+  },
+  {
+    "character": "Magneto",
+    "file": "magneto.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/423-magneto.jpg"
+  },
+  {
+    "character": "Storm",
+    "file": "storm.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/638-storm.jpg"
+  },
+  {
+    "character": "Rocket Raccoon",
+    "file": "rocket.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/566-rocket-raccoon.jpg"
+  },
+  {
+    "character": "Gamora",
+    "file": "gamora.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/275-gamora.jpg"
+  },
+  {
+    "character": "Ant-Man",
+    "file": "antman.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/30-ant-man.jpg"
+  },
+  {
+    "character": "Vision",
+    "file": "vision.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/697-vision.jpg"
+  },
+  {
+    "character": "Deadpool",
+    "file": "deadpool.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/213-deadpool.jpg"
+  },
+  {
+    "character": "Winter Soldier",
+    "file": "winter.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/714-winter-soldier.jpg"
+  },
+  {
+    "character": "Cyclops",
+    "file": "cyclops.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/196-cyclops.jpg"
+  },
+  {
+    "character": "Falcon",
+    "file": "falcon.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/251-falcon.jpg"
+  },
+  {
+    "character": "Jean Grey",
+    "file": "jean.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/356-jean-grey.jpg"
+  },
+  {
+    "character": "Groot",
+    "file": "groot.jpg",
+    "source": "https://cdn.jsdelivr.net/gh/akabab/superhero-api@0.3.0/api/images/lg/303-groot.jpg"
   }
 ]
