@@ -1,5 +1,5 @@
-import {TEAM_LINKS,LINK_CHARGE,teamLinks} from './team-links.mjs?v=6';
-export {TEAM_LINKS,LINK_CHARGE,teamLinks} from './team-links.mjs?v=6';
+import {TEAM_LINKS,LINK_CHARGE,teamLinks} from './team-links.mjs?v=9';
+export {TEAM_LINKS,LINK_CHARGE,teamLinks} from './team-links.mjs?v=9';
 export const STAT_LABELS=['Güç','Zekâ','Hız','Dayanıklılık','Teknoloji','Enerji'];
 export const HEROES=[
 {id:'ironman',name:'Iron Man',alias:'Tony Stark',type:'Teknoloji',group:'Avengers',color:'#e69b45',stats:[7,10,7,8,10,7],skill:'Ark reaktörü',desc:'Zırhını akıllıca kullanır. Reaktör atışı, savunmanın bir bölümünü deler.',ability:'pierce',quote:'Bir zırhtan çok daha fazlası.'},

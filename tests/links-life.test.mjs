@@ -32,3 +32,8 @@ test('elimination latches across rerenders, delayed impacts and new events until
  for(const event of [{special:true},null,{combo:true}]){syncFighterLife(actor,100,event);assert.equal(actor.hp,0);assert.equal(shouldFall(actor,event?{event}:null,.1),true);}
  syncFighterLife(actor,100,null,true);assert.equal(actor.hp,100);assert.equal(actor.eliminated,false);assert.equal(resets,1);
 });
+test('a started fall never re-enters the pre-impact stance, even if the same hit is replayed',()=>{
+ const actor={},hit={};syncFighterLife(actor,0,hit);assert.equal(shouldFall(actor,{event:hit},.1),false);assert.equal(shouldFall(actor,{event:hit},.5),true);
+ assert.equal(shouldFall(actor,{event:hit},0),true);syncFighterLife(actor,200,hit);assert.equal(actor.hp,0);assert.equal(shouldFall(actor,{event:hit},.2),true);
+ syncFighterLife(actor,200,null,true);assert.equal(shouldFall(actor,null,1),false);
+});

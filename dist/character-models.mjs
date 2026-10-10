@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/addons/loaders/GLTFLoader.js';
 import {clone} from './vendor/addons/utils/SkeletonUtils.js';
-import {profileFor} from './character-profiles.mjs?v=6';
+import {profileFor} from './character-profiles.mjs?v=9';
 
 const folder='/assets/characters/', loader=new GLTFLoader(), cache=new Map();
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
@@ -140,7 +140,7 @@ function adaptClips(library,model){
  const target=new Map(),source=new Map();model.traverse(n=>{if(n.isBone)target.set(n.name,n.position.clone());});library.scene.traverse(n=>{if(n.isBone)source.set(n.name,n.position.clone());});
  return library.animations.map(clip=>{
   const tracks=clip.tracks.filter(t=>t.name.endsWith('.quaternion')||t.name==='root.position'||t.name==='pelvis.position').map(track=>{
-   const t=track.clone();if(t.name==='pelvis.position'){
+   const t=track.clone();if(t.name==='root.position'){const rest=model.getObjectByName('root').position;for(let i=0;i<t.values.length;i+=3){t.values[i]=rest.x;t.values[i+2]=rest.z;}}if(t.name==='pelvis.position'){
     const to=target.get('pelvis'),from=source.get('pelvis');for(let i=0;i<t.values.length;i+=3)for(let axis=0;axis<3;axis++)t.values[i+axis]+=to.getComponent(axis)-from.getComponent(axis);
    }return t;
   });return new THREE.AnimationClip(clip.name,clip.duration,tracks);
@@ -151,7 +151,7 @@ export async function loadCharacter(id,{getAsset=asset}={}){
  const p=profileFor(id);if(!p)throw Error('Unknown character '+id);
  const [base,library,hair]=await Promise.all([getAsset(p.base),getAsset('combat'),p.hair?getAsset('Hair_'+(p.hair.startsWith('long')?'Long':p.hair.startsWith('buzz')?'Buzzed':'SimpleParted')):null]);
  const model=clone(base.scene),bones=new Map();model.traverse(n=>{if(n.isBone)bones.set(n.name,n);if(n.isSkinnedMesh)paintBody(n,p,id);});
- const attachments=dress(model,p,id,bones);
+ const attachments=dress(model,p,id,bones);const wingRest=attachments.wings.map(w=>w.quaternion.clone());let cloakMesh;attachments.cloak?.traverse(n=>{if(n.isMesh)cloakMesh=n;});const cloakRest=cloakMesh?.geometry.attributes.position.array.slice();
  if(hair){
   const h=hair.scene.clone(true),hex=p.hair.endsWith('blond')?'#ceaa5a':p.hair.endsWith('white')?'#e0e6ec':p.hair.endsWith('auburn')?'#a14533':p.hair.endsWith('purple')?'#772c68':'#25212c';
   h.traverse(n=>{if(n.isMesh){n.geometry.userData.shared=true;n.material=mat(hex);n.castShadow=true;n.receiveShadow=true;}});
@@ -171,24 +171,34 @@ export async function loadCharacter(id,{getAsset=asset}={}){
   }
  }
  for(const clip of clips){const action=mixer.clipAction(clip);action.play();action.weight=0;action.enabled=true;actions.set(clip.name,action);}
- let idle=0,current=null,exchange=null,deathTime=0,eliminated=false;
+ let idle=0,walkTime=0,current=null,exchange=null,deathTime=0,eliminated=false,overlays=[];
+ function restoreOverlays(){for(const {bone,quaternion} of overlays)bone.quaternion.copy(quaternion);overlays=[];}
  function pose(name,t,dt){
   if(!actions.has(name))name='Idle_Loop';const transition=1-Math.exp(-dt*18);
-  for(const [key,action] of actions){action.weight=THREE.MathUtils.lerp(action.weight,key===name?1:0,current?transition:1);if(key===name)action.time=Math.max(0,Math.min(action.getClip().duration-.001,t));}
+  // A corpse has one authoritative pose; idle/hit weights cannot lift it again.
+  for(const [key,action] of actions){action.weight=name==='Death01'?(key===name?1:0):THREE.MathUtils.lerp(action.weight,key===name?1:0,current?transition:1);if(key===name)action.time=Math.max(0,Math.min(action.getClip().duration-.001,t));}
   current=name;mixer.update(0);
  }
  pose(p.gear==='chair'?'Sitting_Idle_Loop':'Idle_Loop',0,0);
  return {object:visual,profile:p,bones,clipNames:clips.map(c=>c.name),...attachments,
-  reset(){eliminated=false;deathTime=0;exchange=null;idle=0;current=null;pose(p.gear==='chair'?'Sitting_Idle_Loop':'Idle_Loop',0,0);},
-  update({dt,playing=true,moving=0,flight=false,event=null,role=null,progress=1,dead=false}){
-   eliminated||=dead;if(playing&&!eliminated)idle+=dt;let name=p.gear==='chair'?'Sitting_Idle_Loop':moving>.08&&!flight?'Walk_Loop':'Idle_Loop',t=idle%(actions.get(name)?.getClip().duration??2.5);
+  reset(){restoreOverlays();eliminated=false;deathTime=0;exchange=null;idle=0;walkTime=0;current=null;pose(p.gear==='chair'?'Sitting_Idle_Loop':'Idle_Loop',0,0);},
+  update({dt,playing=true,moving=0,flight=false,event=null,role=null,progress=1,dead=false,reduced=false,traveling=false}){
+   restoreOverlays();eliminated||=dead;if(playing&&!eliminated){idle+=dt;walkTime+=dt*clamp(moving/.85,.08,1.4);}let name=p.gear==='chair'?'Sitting_Idle_Loop':moving>.08&&!flight?'Walk_Loop':'Idle_Loop',t=(name==='Walk_Loop'?walkTime:idle)%(actions.get(name)?.getClip().duration??2.5);
    if(eliminated){deathTime+=playing||progress>=1?dt:0;name='Death01';t=Math.min(deathTime,actions.get(name).getClip().duration-.001);}
    else if(event&&role&&progress<1){
     if(exchange!==event){exchange=event;deathTime=0;}
-    if(role==='attacker'){name=p.gear==='chair'?'Spell_Simple_Shoot':event.special&&['sorcerer','witch','storm','magnet','vision','horns','phoenix'].includes(p.gear)?'Spell_Simple_Shoot':p.attack;t=progress*actions.get(name).getClip().duration;}
+    if(role==='attacker'){name=p.gear==='chair'?'Spell_Simple_Shoot':event.special&&['sorcerer','witch','storm','magnet','vision','horns','phoenix'].includes(p.gear)?'Spell_Simple_Shoot':p.attack;if(['Punch_Jab','Punch_Cross'].includes(name)&&event.round%2===0)name=name==='Punch_Jab'?'Punch_Cross':'Punch_Jab';t=progress*actions.get(name).getClip().duration;if(traveling&&progress>.15&&progress<.34){name='Jog_Fwd_Loop';t=progress*4%actions.get(name).getClip().duration;}}
     else if(progress>.48){name=event.dodge?'Roll':'Hit_Chest';t=clamp((progress-.48)/.52)*actions.get(name).getClip().duration;}
    }
    pose(name,t,dt);
+   if(flight&&!eliminated&&!(event&&role&&progress<1)&&p.gear!=='chair'){
+    for(const [name,angle] of [['spine_03',.09],['thigh_l',.15],['thigh_r',.22],['calf_l',.22],['calf_r',.29]]){const bone=bones.get(name);overlays.push({bone,quaternion:bone.quaternion.clone()});bone.rotateX(angle);}
+   }
+   if(!reduced){
+    if(cloakMesh){const attr=cloakMesh.geometry.attributes.position;for(let i=0;i<attr.count;i++){const y=cloakRest[i*3+1],amount=Math.max(0,.5-y);attr.setZ(i,cloakRest[i*3+2]+Math.sin(idle*3.2+cloakRest[i*3]*9-y*4)*.035*amount*(flight?1.7:1));}attr.needsUpdate=true;}
+    this.wings.forEach((wing,i)=>{wing.quaternion.copy(wingRest[i]);if(!eliminated)wing.rotateZ((i?1:-1)*Math.sin(idle*(id==='wasp'?24:3.2))*(id==='wasp'?.1:.035));});
+   }
+
    this.jets.forEach(j=>{j.visible=flight&&!eliminated;j.scale.y=.9+Math.sin(idle*23)*.12;});
   },
   dispose(){mixer.stopAllAction();mixer.uncacheRoot(model);const geometry=new Set(),materials=new Set(),skeletons=new Set();model.traverse(n=>{if(n.isMesh){if(!n.geometry.userData.shared)geometry.add(n.geometry);if(n.isSkinnedMesh)skeletons.add(n.skeleton);if(n.material)(Array.isArray(n.material)?n.material:[n.material]).forEach(m=>materials.add(m));}});geometry.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());skeletons.forEach(s=>s.dispose());}

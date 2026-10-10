@@ -10,7 +10,10 @@ function patchScene(current,fresh){
  for(let i=0;i<children.length;i++){
   const child=children[i];
   const id=key(child),old=remaining.get(id);remaining.delete(id);
-  if(sceneOwned.has(id)&&old)continue;
+  if(sceneOwned.has(id)&&old){
+   if(child.hasAttribute('aria-label'))old.setAttribute('aria-label',child.getAttribute('aria-label'));
+   continue;
+  }
   if(old)old.replaceWith(child);
   else{
    const next=children.slice(i+1).map(key).map(k=>remaining.get(k)).find(Boolean);

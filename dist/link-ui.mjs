@@ -1,5 +1,5 @@
-import {hero,linkStatus} from './engine.mjs?v=6';
-import {TEAM_LINKS,LINK_CHARGE,teamLinks,heroLinks} from './team-links.mjs?v=6';
+import {hero,linkStatus} from './engine.mjs?v=9';
+import {TEAM_LINKS,LINK_CHARGE,teamLinks,heroLinks} from './team-links.mjs?v=9';
 const names=link=>link.members.map(id=>hero(id).name).join(' + ');
 const faces=link=>`<div class="bond-faces">${link.members.map(id=>`<img src="/assets/${id}.jpg" alt="${hero(id).name}">`).join('')}<span>✦</span></div>`;
 export function draftBonds(ids){const links=teamLinks(ids);return links.length?`<div class="draft-bonds"><span>İKİLİ YETENEKLER</span>${links.map(l=>`<b title="${l.desc}">✦ ${l.name}</b>`).join('')}</div>`:'';}

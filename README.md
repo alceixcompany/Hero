@@ -1,8 +1,9 @@
 # NEXUS — Kahramanlar Arenası
 
-Türkçe, tarayıcıda çalışan açık artırma ve arena oyunu. Kurulum bağımlılığı yok.
+Hero / NEXUS: Türkçe açık artırma ve 3B arena oyunu. Aynı cihaz, bot ve iki ayrı cihazdan çevrimiçi oda modları vardır. Node.js 22+ önerilir; Node 20.19+ ile de çalışır.
 
 ```sh
+npm ci
 npm run dev
 ```
 
@@ -24,11 +25,11 @@ Tarayıcı: http://127.0.0.1:5173. Motor testleri: `npm test`.
 
 ## Motor
 
-`dist/engine.mjs` DOM'dan bağımsız kuralları içerir. `dist/auction-ui.mjs` gelecek lotların kimliğini arayüze aktarmadan gizler. `dist/arena-3d.mjs`, Three.js ile hazır iskeletli karakter modelleri, üç arena, ışık, gölge, enerji mermileri, ışın/yıldırım, kalkan ve darbe efektleri çizer. `dist/arena-ui.mjs` savaş panellerini, `dist/app.mjs` oynatımı yönetir. Three.js 0.180.0 çalışma dosyaları `dist/vendor/` içinde yereldir; lisansı yanında bulunur. Doğrudan statik barındırılabilir.
+`dist/engine.mjs` DOM'dan bağımsız kuralları içerir. `dist/auction-ui.mjs` gelecek lotların kimliğini arayüze aktarmadan gizler. `dist/arena-3d.mjs`, Three.js ile hazır iskeletli karakter modelleri, üç arena, ışık, gölge, enerji mermileri, ışın/yıldırım, kalkan ve darbe efektleri çizer. `dist/arena-ui.mjs` savaş panellerini, `dist/app.mjs` oynatımı yönetir. Three.js 0.180.0 çalışma dosyaları `dist/vendor/` içinde yereldir; lisansı yanında bulunur. Yerel/bot modları statik çalışabilir. İki cihaz modu aynı adreste Node/WebSocket sunucusuna ihtiyaç duyar; GitHub Pages tek başına yeterli değildir.
 
 Can: 65 + dayanıklılık × 12. Temel saldırı: güç × 1.5 + enerji × 1.15 + teknoloji × 0.65 + zekâ × 0.4 + 7. Uyum saldırıya eklenir; dayanıklılık normalde ×0.9, delici saldırıda ×0.3 hasar azaltır. Kritik ×1.5; özel hamle ×1.25. Hız ve zekâ hamle sırasına, hız farkı %2–16 kaçışa etki eder. Şans her vuruşta kritik ve hasar sapması yaratır. Hedefler yaşayan rakiplerden rastgele seçilir. 40 tur sınırında kalan can / başlangıç can oranı sonucu belirler.
 
-Puanlar oyuna özel dengeleme değerleridir; resmî Marvel sıralaması değildir. İlk oynanabilir sürüm aynı cihazda çalışır; çevrimiçi oda sunucusu yoktur. Arena artık stilize 3B figürlerle mücadeleyi gösterir; fotoğraf gerçekçiliğinde film modelleri kullanmaz. Geniş/yakın kamera ve tam ekran mevcuttur. WebGL açılamayan cihazlarda takım panelleri ve günlük oynanabilir kalır.
+Puanlar oyuna özel dengeleme değerleridir; resmî Marvel sıralaması değildir. Çevrimiçi modda Node/WebSocket sunucusu oyun durumunu yönetir. Arena artık stilize 3B figürlerle mücadeleyi gösterir; fotoğraf gerçekçiliğinde film modelleri kullanmaz. Geniş/yakın kamera ve tam ekran mevcuttur. WebGL açılamayan cihazlarda takım panelleri ve günlük oynanabilir kalır.
 
 ## Görseller
 
@@ -74,3 +75,37 @@ Karakter detaylarındaki **3B modeli incele** düğmesi büyük bir vitrin açar
 İki üye aynı takımda ve hayattayken üyelerden gelen her saldırı ortak sayaca 1 yük ekler. 4 yükte isabetli saldırı otomatik ikili hamleye dönüşür; kaçış olursa yük korunur. Bir saldırıda en fazla bir ikili hamle çalışır; bir üye elenince bağ kapanır. Ek hasar kalkan tarafından emilir; alan hasarı, hedef zayıflatma ve ikili kalkanları gerçek motor sonuçlarıdır, kalkan 60 sınırını aşmaz. Yük veya yetenekler yeni savaşa taşınmaz. Grup uyumu ve kişisel her-3-saldırı yetenekleri ayrıca çalışır.
 
 Arşivde **Marvel bağları** rehberi, kahraman detaylarında eşleşmeler, açık artırma takımında tamamlanmış ikililer ve arena altında yük göstergeleri bulunur. İkili hamlede yardımcı karakterin iskeleti de saldırır, ikinci ışın ve ortak darbe halkası görünür; savaş günlüğü ikiliyi kaydeder. Gelecek lot kimlikleri gizli kalır. `npm test` yedi yeteneğin etkilerini, çapraz takımın bağ kuramamasını, kaçışta yükün korunmasını, elenmenin kalıcılığını ve ses çizgesinin/mute davranışının geçerliliğini doğrular.
+
+
+## v9 — Canlı müzayede ve iki cihazdan oyun
+
+**Çevrimiçi → Oda oluştur** ile adını gir. Arkadaşın **Kodla katıl** seçer veya davet bağlantısını açar. Altı karakterli kod yalnızca odayı bulur; oyuncu oturum anahtarı davet URL’sine konmaz. İkiniz **Hazırım** dedikten sonra oda sahibi müzayedeyi başlatır. Arena ve şans ayarlarını oda sahibi seçer; mücadele ve rövanş iki oyuncunun onayıyla başlar. Aynı cihaz ve bot modu korunur.
+
+- Canlı teklif akışı, +1/+3/+5 hızlı teklifler, açılış parlaması, satış bildirimi ve aktif oyuncunun takım uyumu / ikili yetenek ipucu.
+- Her teklif sırası 20 saniye; yeni kartta açılış animasyonu için ek 1,5 saniye. Süre dolması otomatik pas. Yerel/bot modunda süre sınırı yok.
+- Sunucu teklif sırasını, tamsayı/bütçe/takım sınırını, komut maliyetini, bekleme süresini ve yalnızca oturum sahibinin takımını doğrular. Coin, savaş şansı ve sonuç istemciden kabul edilmez.
+- Gelecek lotlar DOM’a veya ağdaki oda durumuna gönderilmez. Sadece aktif/geçmiş kahramanlar açılır; arşiv tüm 30 karakterin genel bilgilerini gösterir.
+- Durum sürümü eski istekleri reddeder; istek kimliği tekrarının sonucunu yeniden satın alma yapmadan döndürür. Bağlantıda kalmış teklifler otomatik tekrar gönderilmez.
+- Yenileme aynı sekmedeki `sessionStorage` oturumuyla geri katılır. Kopan bağlantı otomatik yeniden denenir. Başka sekmeden aynı oyuncu açılırsa eski sekme devreden çıkar; iki sekme bir takımı aynı anda yönetmez.
+- Bir oyuncu kopunca saat ve savaş durur. 2 dakika içinde dönmezse oda kapanır ve bağlı rakip kazanır; iki taraf da çevrimdışıysa kazanan atanmaz. Lobide misafir ayrılırsa koltuğu yeniden kullanılabilir; oda sahibi ayrılırsa oda kapanır.
+- Savaşın hamleleri sunucuda aynı sırayla hesaplanır. Kameralar her cihazda ayrı seçilebilir. Oynatma hızını oda sahibi yönetir. Her oyuncu mücadele başına üç kez 30 saniyelik taktik molası kullanabilir; molalar otomatik biter.
+- Oda durumları `.data/rooms.json` içinde atomik olarak, `0600` izinle saklanır. Oturum anahtarları diskte SHA-256 özeti olarak tutulur. Sunucu yeniden başlatılırsa oda, bütçe, takım, rastgele sayı durumu ve savaş kuyruğu korunur. Sunucu diske kaydedemezse yeni işlemleri durdurur.
+- Origin kontrolü, 4 KB WebSocket paket sınırı, hız sınırı, bağlantı kalp atışı ve yavaş bağlantı koruması bulunur. Bir sunucuda en fazla 300 oda / 600 bağlantı. Bir saat kullanılmayan ve tüm oyuncuları çevrimdışı olan odalar temizlenir.
+
+### İki telefon/bilgisayar, aynı Wi-Fi
+
+`npm run dev` hem `http://127.0.0.1:5173` hem bilgisayarın LAN adresini yazdırır. İkinci cihaz **127.0.0.1 kullanmaz**; terminaldeki `http://192.168.x.x:5173` adresini açar. Yerel cihazdan oluşturulan davet bağlantısı otomatik LAN adresini kullanır. Bilgisayar açık kalmalı; aynı Wi-Fi, TCP 5173 erişimi ve cihazlar arası iletişim gerekir. Konuk Wi-Fi izolasyonu veya işletim sistemi güvenlik duvarı erişimi engelleyebilir. VPN varsa doğru LAN adresini kullanın.
+
+### İnternet üzerinden yayınlama
+
+GitHub’a kod göndermek çalışan oyun sunucusu oluşturmaz. Node.js/WebSocket destekleyen tek bir sunucu, HTTPS/WSS ve kalıcı disk gerekir. `npm ci && npm start` ile çalıştırın; `PORT` barındırma ortamından alınır. Reverse proxy `/ws` için WebSocket upgrade ve Host başlığını korumalıdır. Sağlık kontrolü: `GET /api/health`. `PUBLIC_URL` gerçek HTTPS adresiyse davet bağlantıları bunu kullanır. `ALLOWED_ORIGINS` gerekirse virgülle ayrılan tam origin adresleriyle ayarlanır. `.env.example` örnektir; Node ortam değişkenlerini hizmet yapılandırmasından veya `node --env-file=.env server.mjs` ile yükleyin.
+
+Docker kullanımı:
+
+```sh
+docker compose up --build -d
+```
+
+`rooms` volume oda durumlarını yeniden başlatmalar arasında tutar. HTTPS’i reverse proxy üzerinden sağlayın. **Tek uygulama instance/replica çalıştırın.** Oda durumu tek süreçte ve tek diskte tutulur; çoklu sunucu için ortak veri deposu ve dağıtık oda yönlendirmesi eklenmelidir. Kalıcı disksiz bir yayında sunucu yeniden oluşturulursa odalar kaybolur. Oda kodu hesabın yerini tutmaz: bağlantıyı yalnızca oynamasını istediğiniz kişiyle paylaşın; odaya üçüncü oyuncu alınmaz. Sekmenin oturum verisini temizlerseniz sunucu oyuncu anahtarınızı yeniden vermez.
+
+Testler: `npm test`. Oda testleri eşzamanlı/eski/tekrarlanan istekleri, gizli lotları, yetkileri, süre/kopma/geri dönüşü, sunucu yeniden başlatmasını, dosya izinlerini, gerçek WebSocket bağlantılarını, Origin/paket sınırlarını, ortak sonucu ve rövanşı doğrular. GitHub Actions Node 22/24 üzerinde bunları çalıştırır.

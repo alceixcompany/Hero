@@ -1,0 +1,13 @@
+services:
+  hero:
+    build: .
+    ports:
+      - "5173:5173"
+    volumes:
+      - rooms:/data
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      ROOM_DATA_FILE: /data/rooms.json
+volumes:
+  rooms:

@@ -1,5 +1,5 @@
-// Original synthesized music/effects; no recordings or external audio downloads.
-export const DEFAULT_AUDIO={enabled:true,effects:.65,music:.18};
+// Original effects and fallback rhythm; official/local tracks use a separate player.
+export const DEFAULT_AUDIO={enabled:true,effects:.65,music:.12};
 export function soundFamily(id){
  if(['ironman','warmachine','vision','marvel','cyclops','wasp','antman'].includes(id))return 'energy';
  if(['thor','storm'].includes(id))return 'thunder';
@@ -35,11 +35,12 @@ export class GameAudio{
   try{this.storage?.setItem('nexus-audio-v1',JSON.stringify(this.settings));}catch{}
   this.applyVolumes();if(!this.settings.enabled||!this.settings.music)this.stopMusic();if(this.settings.enabled){void this.unlock();this.scheduleMusic();}this.onState(this.status);
  }
- applyVolumes(){if(!this.ctx)return;const t=this.ctx.currentTime;this.master.gain.setTargetAtTime(this.settings.enabled?.8:0,t,.035);this.musicBus.gain.setTargetAtTime(this.scene==='silent'?0:this.settings.music,t,.07);this.fxBus.gain.setTargetAtTime(this.settings.effects,t,.035);}
+ applyVolumes(){if(!this.ctx)return;const t=this.ctx.currentTime;this.master.gain.setTargetAtTime(this.settings.enabled?.8:0,t,.035);this.musicBus.gain.setTargetAtTime(this.scene==='silent'||this.externalMusic?0:this.settings.music,t,.07);this.fxBus.gain.setTargetAtTime(this.settings.effects,t,.035);}
+ setExternalMusic(active){this.externalMusic=active;this.stopMusic();this.applyVolumes();this.scheduleMusic();}
  setScene(scene){if(scene===this.scene)return;this.scene=scene;this.stopMusic();this.applyVolumes();this.scheduleMusic();}
  stopMusic(){clearInterval(this.timer);this.timer=null;this.nextBeat=0;}
  scheduleMusic(){
-  if(this.timer||this.scene==='silent'||!this.settings.enabled||!this.settings.music||this.ctx?.state!=='running')return;
+  if(this.externalMusic||this.timer||this.scene==='silent'||!this.settings.enabled||!this.settings.music||this.ctx?.state!=='running')return;
   const schedule=()=>{if(this.ctx.state!=='running')return;const now=this.ctx.currentTime;if(this.nextBeat<now)this.nextBeat=now+.03;
    while(this.nextBeat<now+.15){this.musicBeat(this.nextBeat,this.beat++);this.nextBeat+=this.scene==='arena'?.28:.42;}
   };schedule();this.timer=setInterval(schedule,100);

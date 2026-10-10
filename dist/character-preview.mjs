@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {loadCharacter} from './character-models.mjs?v=6';
+import {loadCharacter} from './character-models.mjs?v=9';
 
 export class CharacterPreview{
  constructor(host,h){

@@ -53,3 +53,19 @@ test('an eliminated hero stays in its death pose during subsequent attacks',asyn
  model.reset();for(let i=0;i<90;i++)model.update({dt:1/60});
  assert.ok(model.bones.get('pelvis').quaternion.angleTo(before)>.01);model.dispose();
 });
+test('all thirty skeletons stay grounded after hit, flight, pause and later attack animations',async()=>{
+ for(const h of HEROES){
+  const m=await loadCharacter(h.id,{getAsset});const fatal={attacker:'thor'};
+  for(let i=0;i<30;i++)m.update({dt:1/60,event:fatal,role:'target',progress:i/60,flight:h.flight});
+  for(let i=0;i<180;i++)m.update({dt:1/60,dead:true,event:fatal,role:'target',progress:.5+i/360,flight:h.flight});
+  for(let hit=0;hit<3;hit++)for(let i=0;i<60;i++){
+   m.update({dt:1/60,playing:hit!==1,dead:false,event:{},role:hit%2?'attacker':'target',progress:i/60,moving:.5,flight:h.flight});
+   m.object.updateMatrixWorld(true);assert.ok(m.bones.get('Head').getWorldPosition(new Vector3()).y<.5,h.name+' must remain down');
+  }m.dispose();
+ }
+});
+test('flight posture does not accumulate joint rotation while idle or paused',async()=>{
+ const m=await loadCharacter('ironman',{getAsset});m.update({dt:1/60,playing:false,flight:true});const first=m.bones.get('thigh_l').quaternion.clone();
+ for(let i=0;i<600;i++)m.update({dt:1/60,playing:false,flight:true});assert.ok(m.bones.get('thigh_l').quaternion.angleTo(first)<.00001);
+ for(let i=0;i<120;i++)m.update({dt:1/60,playing:false,flight:false});assert.ok(m.bones.get('thigh_l').quaternion.angleTo(first)<.2);m.dispose();
+});

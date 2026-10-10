@@ -2,16 +2,18 @@ const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 
 // Shots share a fixed side of the arena. Attacks can gently bias the framing,
 // but never trigger a zoom, reverse angle, or snap back between turns.
-export function cameraGoal(mode,aspect,focus=null){
+export function cameraGoal(mode,aspect,focus=null,{time=0,reduced=false}={}){
  const portrait=aspect<1.25,fit=Math.max(1,.85/Math.max(.2,aspect));
- const close=mode==='close';
- const position=portrait?[0,(close?19:22)*fit,(close?18:21)*fit]:[0,close?9:mode==='follow'?10:10.6,close?14.2:mode==='follow'?16.2:16.8];
- const look=[0,close?1.5:1.2,0];
+ const close=mode==='close',orbit=mode==='orbit';
+ const position=portrait?[2.2*fit,(close?17.5:19.5)*fit,(close?21:23)*fit]:[close?5.2:4.2,close?8.5:mode==='wide'?12.4:10,close?16.4:mode==='wide'?20:18.2];
+ // The orbit is tied to elapsed viewing time, never to a hit or team switch.
+ if(!reduced&&(mode==='follow'||orbit)){const angle=Math.sin(time*(orbit?.075:.035))*(orbit?.38:.065),x=position[0],z=position[2];position[0]=x*Math.cos(angle)+z*Math.sin(angle);position[2]=z*Math.cos(angle)-x*Math.sin(angle);}
+ const look=[0,close?1.5:1.2,-.4];
  if(focus&&mode!=='wide'){
   const weight=portrait?.055:close?.12:.09;
   look[0]=clamp(focus[0]*weight,-.6,.6);
-  look[2]=clamp(focus[2]*weight,-.6,.6);
-  position[0]=look[0]*.6;
+  look[2]=-.4+clamp(focus[2]*weight,-.6,.6);
+  position[0]+=look[0]*.6;
  }
  return {position,look};
 }
