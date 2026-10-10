@@ -19,14 +19,6 @@ export function addAtmosphere(env,map,glow){
   const strip=new THREE.Mesh(new THREE.BoxGeometry(.13,.045,1.45),new THREE.MeshBasicMaterial({color:palette.accent}));g.add(strip);
   const light=new THREE.Sprite(new THREE.SpriteMaterial({map:glow,color:palette.accent,transparent:true,opacity:.2,depthWrite:false,blending:THREE.AdditiveBlending}));light.position.y=.1;light.scale.set(1.7,.65,1);g.add(light);accents.push(light);
  }
- // Thin landing markings and large raised panels give the platform a believable scale.
- const panelMat=new THREE.MeshPhysicalMaterial({color:map==='city'?'#33455c':map==='asgard'?'#343b50':'#254c49',metalness:.45,roughness:.43,clearcoat:.65,clearcoatRoughness:.32});
- for(let x=-6;x<=6;x+=3)for(let z=-4.5;z<=4.5;z+=3){const panel=new THREE.Mesh(new THREE.BoxGeometry(2.96,.018,2.96),panelMat);panel.position.set(x,-.061,z);panel.receiveShadow=true;env.add(panel);}
- if(map==='city'){
-  const marking=new THREE.MeshBasicMaterial({color:'#c7c9b9',transparent:true,opacity:.32});
-  for(const x of [-7.8,7.8])for(let z=-4;z<=4;z+=1.2){const line=new THREE.Mesh(new THREE.BoxGeometry(.045,.006,.5),marking);line.position.set(x,-.044,z);env.add(line);}
- }
- const ring=new THREE.Mesh(new THREE.TorusGeometry(2.4,.018,8,96),new THREE.MeshBasicMaterial({color:palette.accent,transparent:true,opacity:.18}));ring.rotation.x=-Math.PI/2;ring.position.y=-.039;env.add(ring);
  const timeUniform={value:0};
  if(map==='asgard'){
   const gate=new THREE.Group();gate.position.set(0,6.5,-12);env.add(gate);

@@ -79,6 +79,8 @@ Arşivde **Marvel bağları** rehberi, kahraman detaylarında eşleşmeler, aç�
 
 ## v9 — Canlı müzayede ve iki cihazdan oyun
 
+Her kahramanın açılış teklifi 1 coin'dir. Yeni karakter açıldığında veya teklif sırası değiştiğinde seçici geçerli en düşük teklife döner; aynı sıradaki çevrimiçi güncellemeler seçtiğin tutarı korur. Üstteki sıra bildirimi ve oyuncu kartı, ilk teklif sahibini ve aktif oyuncuyu gösterir. Açılış sırası her karakterde değişir.
+
 **Çevrimiçi → Oda oluştur** ile adını gir. Arkadaşın **Kodla katıl** seçer veya davet bağlantısını açar. Altı karakterli kod yalnızca odayı bulur; oyuncu oturum anahtarı davet URL’sine konmaz. İkiniz **Hazırım** dedikten sonra oda sahibi müzayedeyi başlatır. Arena ve şans ayarlarını oda sahibi seçer; mücadele ve rövanş iki oyuncunun onayıyla başlar. Aynı cihaz ve bot modu korunur.
 
 - Canlı teklif akışı, +1/+3/+5 hızlı teklifler, açılış parlaması, satış bildirimi ve aktif oyuncunun takım uyumu / ikili yetenek ipucu.
