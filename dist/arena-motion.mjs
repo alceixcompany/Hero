@@ -1,23 +1,25 @@
+import {cinematicProgress,exchangeDuration} from './combat-choreography.mjs';
 export function advanceExchange(action,dt,playing){
  if(!action)return 1;
  if(playing||action.finishWhilePaused)action.elapsed+=Math.max(0,Math.min(.05,dt));
- return Math.min(1,action.elapsed/action.duration);
+ const progress=Math.min(1,action.elapsed/action.duration);return action.event?.finisher&&!action.reduced?cinematicProgress(progress):progress;
 }
 
 export function retimeExchange(action,speed,reduced=false){
  if(!action)return;
  const progress=Math.min(1,action.elapsed/action.duration);
- action.duration=reduced?.25:1.65/speed;
+ action.duration=exchangeDuration(speed,reduced,action.event?.finisher);
  action.elapsed=progress*action.duration;
 }
 
 export const smoothStep=n=>{const x=Math.max(0,Math.min(1,n));return x*x*(3-2*x);};
 // One continuous journey with a short planted contact, then a deliberate recovery.
-export function exchangeMotion(progress,{flight=false,ranged=false,id='',special=false,reduced=false,flank=false}={}){
+export function exchangeMotion(progress,{flight=false,ranged=false,id='',special=false,reduced=false,flank=false,encounter='',targetLift=0}={}){
  const p=Math.max(0,Math.min(1,progress)),approach=smoothStep((p-.15)/.3),recovery=smoothStep((p-.6)/.4),envelope=Math.sin(Math.PI*p);
- const travel=ranged?0:approach*(1-recovery),recoil=p<.48?0:Math.sin(Math.PI*Math.min(1,(p-.48)/.52))**2;
- const lift=reduced?0:id==='spiderman'&&!ranged?Math.sin(Math.PI*travel)*1.45:id==='hulk'&&special?Math.sin(Math.PI*travel)*.85:flight?envelope*(ranged?.3:.65):0;
- return {travel,lift,bank:flight&&!reduced?envelope*(ranged?.12:.2):0,recoil,dodge:recoil*1.05,arc:!ranged&&!reduced?Math.sin(Math.PI*travel)*(flank?1.2:.28):0};
+ const diving=encounter==='aerial',travel=ranged&&!diving?0:approach*(1-recovery),recoil=p<.48?0:Math.sin(Math.PI*Math.min(1,(p-.48)/.52))**2;
+ const baseLift=reduced?0:diving?Math.sin(Math.PI*approach)*(1-recovery)*2.25+recovery*(1-recovery)*1.4:id==='spiderman'&&!ranged?Math.sin(Math.PI*travel)*1.45:id==='hulk'&&special?Math.sin(Math.PI*travel)*.85:flight?envelope*(ranged?.3:.65):0;
+ const lift=!flight&&!ranged?Math.max(baseLift,Math.max(0,targetLift)*travel):baseLift;
+ return {travel,lift,bank:diving&&!reduced?Math.sin(Math.PI*travel)*.48:flight&&!reduced?envelope*(ranged?.12:.2):0,recoil,dodge:recoil*1.05,arc:(!ranged||diving)&&!reduced?Math.sin(Math.PI*travel)*(flank?1.2:.28):0};
 }
 export function avoidCrowding(position,others,id,dt=1/60){
  let x=position[0],z=position[1];

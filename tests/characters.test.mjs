@@ -69,3 +69,16 @@ test('flight posture does not accumulate joint rotation while idle or paused',as
  for(let i=0;i<600;i++)m.update({dt:1/60,playing:false,flight:true});assert.ok(m.bones.get('thigh_l').quaternion.angleTo(first)<.00001);
  for(let i=0;i<120;i++)m.update({dt:1/60,playing:false,flight:false});assert.ok(m.bones.get('thigh_l').quaternion.angleTo(first)<.2);m.dispose();
 });
+
+import {encounterFor} from '../dist/combat-choreography.mjs';
+test('character exchanges, defensive poses and individual victories stay finite and never lift a corpse',async()=>{
+ for(const h of HEROES){const m=await loadCharacter(h.id,{getAsset}),encounter=encounterFor(h),event={attacker:h.id,special:false,dodge:false};
+  for(const role of ['attacker','target'])for(const progress of [.2,.33,.42,.48,.6,.9]){m.update({dt:.016,event,encounter,role,progress,flight:h.flight});m.object.updateMatrixWorld(true);const bounds=new Box3().setFromObject(m.object);assert.ok([...bounds.min.toArray(),...bounds.max.toArray()].every(Number.isFinite),h.name);assert.ok(bounds.max.y-bounds.min.y<6,h.name+' exchange pose');}
+  for(let i=0;i<90;i++)m.update({dt:1/60,victory:true,victoryProgress:i/90,flight:h.flight});m.object.updateMatrixWorld(true);assert.ok(Number.isFinite(new Box3().setFromObject(m.object).max.y));
+  for(let i=0;i<180;i++)m.update({dt:1/60,dead:true,victory:true,victoryProgress:1});m.object.updateMatrixWorld(true);assert.ok(m.bones.get('Head').getWorldPosition(new Vector3()).y<.5,h.name+' victory cannot revive a corpse');m.dispose();
+ }
+});
+test('overlapping flight and victory overlays restore the original joints without accumulated rotation',async()=>{
+ const m=await loadCharacter('thor',{getAsset});for(let i=0;i<120;i++)m.update({dt:1/60,playing:false,flight:true,victory:true,victoryProgress:1});const pose=m.bones.get('spine_03').quaternion.clone();
+ for(let i=0;i<600;i++)m.update({dt:1/60,playing:false,flight:true,victory:true,victoryProgress:1});assert.ok(m.bones.get('spine_03').quaternion.angleTo(pose)<.00001);m.dispose();
+});

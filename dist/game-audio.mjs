@@ -86,6 +86,7 @@ export class GameAudio{
   else if(family==='web'){this.noise(.1,.17,3800,t,pan,undefined,'bandpass');this.note(420,.16,.05,'sine',t,undefined,pan,90);}
   else if(family==='shield'){[680,1130,1620].forEach(f=>this.note(f,.23,.045,'triangle',t,undefined,pan));this.noise(.08,.13,1500,t,pan);}
   else{this.note(110,.19,.2*strength,'sine',t,undefined,pan,35);this.noise(.13,.19,650,t,pan);}
+  if(event.finisher){this.note(65,.8,.12,'sine',t,undefined,0,28);[220,330,440].forEach((f,i)=>this.note(f,.55,.035,'triangle',t+.18+i*.09));}
   if(event.absorbed){this.note(1100,.26,.08,'sine',t,undefined,pan,500);}
   if(event.combo){this.note(82,.35,.22,'sine',t,undefined,0,35);this.note(660,.33,.075,'triangle',t+.08,undefined,0,1320);}
   if(event.defeated?.length||event.knockout){this.note(190,.45,.1,'triangle',t+.06,undefined,pan,42);}

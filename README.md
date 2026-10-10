@@ -148,3 +148,13 @@ Açık artırma tamamlanınca savaş planı modalı açılır. Bir kahraman seç
 - Yatay/dikey komşu ikililer her ikinci ortak saldırıda +1 ek yük kazanır. Kişisel alan yetenekleri hedefin komşularına yayılır ve siperi aşar; mevcut ikili alan etkileri tüm diğer yaşayan rakiplere yayılmaya devam eder.
 
 Arena modelleri bu konumlara yerleşir: siperler, basamaklı platformlar, koruma bağlantısı ve avcıların kavisli yaklaşması seçimleri görünür kılar. Ekran etiketleri birbirini kapatmamak için yerleştirilir; görsel hareket savaş hesabından bağımsızdır. Yerel WebSocket odaları ve Vercel Redis odaları aynı kuralları kullanır.
+
+### Karşılaşmalar ve maç özeti
+
+Yakın dövüşte hazırlık, kısa yumruk/kılıç alışverişi ve asıl darbe; uçabilen kahramanlarda yükselme, dalış ve geri dönüş; mistik kahramanlarda hedefi çevreleyen büyü alanı gösterilir. Kaçış, kalkan, alan hasarı ve elenme yetkili savaş hesabına bağlıdır. Animasyondaki hazırlık hamleleri ek hasar vermez; arenadaki can çubukları asıl temas anında değişir.
+
+Maçı bitiren isabetli darbe kısa ve yumuşak ağır çekim kullanır. Normal elemeler ve 40 tur sonunda verilen karar bu efekti başlatmaz. Hız değişimi animasyonun bulunduğu anı korur; azaltılmış hareket tercihi ağır çekimi ve yoğun efektleri kapatır. Yerel ve çevrimiçi sonuç ekranı animasyon tamamlanınca açılır. Kazananlar ekipmanlarına göre zafer pozu alır; elenen karakterler kalkmaz. Yeniden bağlanan cihaz, geçmiş son darbeyi tekrar oynatmaz.
+
+Maç özetinde en çok gerçek can hasarı veren ve en çok koruma katkısı yapan kahraman yer alır. Alan hasarı ve koruyucuya aktarılan hasar hesaba katılır; kalan canın üstündeki hasar sayılmaz. Koruma, üstlenilen doğrudan hasar ve kahramanın verdiği kalkanın gerçekten emdiği hasardır. Oyuncunun takım kalkanı komutu bir kahramana yazılmaz. Kırılma anı, kazananın en çok eleme yapan hamlesi; eşitlikte en çok gerçek hasar veren hamlesidir (beraberlikte iki taraf değerlendirilir). “Arenayı incele” zafer pozlarını açar; “Maç özeti” sonuç kartlarını tekrar gösterir. Çevrimiçi inceleme seçimi yeni snapshot geldiğinde kapanmaz.
+
+Arena, yerel olarak üretilen yansıma ortamı, temas gölgeleri, ekran boyutuna göre gölge çözünürlüğü ve karaktere özgü darbe efektleri kullanır; ek model servisi veya deploy ayarı gerekmez.

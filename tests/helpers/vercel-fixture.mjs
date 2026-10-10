@@ -1,3 +1,4 @@
+import {battleHighlights} from '../../dist/battle-highlights.mjs';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import {RoomService,PRESENCE_MS} from '../../hosting/room-service.mjs';
@@ -55,7 +56,9 @@ export async function exerciseRooms(redis,key){
  await request(b,{type:'action',id:'arena-b',rev:b.state.rev,action:'battle-ready'});await poll(resumed);
  assert.equal(resumed.state.status,'battle');
  for(let i=0;i<100&&!resumed.state.battle.done;i++){time+=3700;await poll(resumed);await poll(b);assert.deepEqual(resumed.state.battle,b.state.battle);}
- assert.equal(resumed.state.battle.done,true);
+ assert.equal(resumed.state.battle.done,true);assert.equal(resumed.state.battle.events.at(-1).finisher,true);
+ const highlights=battleHighlights(resumed.state.battle);assert.deepEqual(battleHighlights(b.state.battle),highlights);assert.ok(highlights.damage.damage>0);
+ assert.equal(resumed.state.battle.fighters.flat().reduce((n,f)=>n+f.metrics.damage,0),resumed.state.battle.events.flatMap(e=>e.hits).reduce((n,h)=>n+h.damage,0));
  const winner=resumed.state.battle.winner;
  time+=150000;await poll(b);assert.equal(b.state.battle.winner,winner);
  assert.ok(!JSON.stringify(b.state).includes(resumed.auth.token));assert.ok(!JSON.stringify(b.state).includes(resumed.connection));
