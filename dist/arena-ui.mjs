@@ -1,5 +1,5 @@
-import {bondDeck} from './link-ui.mjs?v=9';
-import {ARENAS,hero,synergy,TACTICS,COMMANDS,canCommand,upcomingTurns} from './engine.mjs?v=9';
+import {bondDeck} from './link-ui.mjs';
+import {ARENAS,hero,synergy,TACTICS,COMMANDS,canCommand,upcomingTurns} from './engine.mjs';
 export function arenaMarkup(game,battle,playing,speed,lastEvent,resultVisible,{icon,esc,portrait}){
  const a=ARENAS.find(a=>a.id===game.arena);
  const total=side=>battle?battle.fighters[side].reduce((n,f)=>n+f.hp,0):0;

@@ -25,7 +25,7 @@ Tarayıcı: http://127.0.0.1:5173. Motor testleri: `npm test`.
 
 ## Motor
 
-`dist/engine.mjs` DOM'dan bağımsız kuralları içerir. `dist/auction-ui.mjs` gelecek lotların kimliğini arayüze aktarmadan gizler. `dist/arena-3d.mjs`, Three.js ile hazır iskeletli karakter modelleri, üç arena, ışık, gölge, enerji mermileri, ışın/yıldırım, kalkan ve darbe efektleri çizer. `dist/arena-ui.mjs` savaş panellerini, `dist/app.mjs` oynatımı yönetir. Three.js 0.180.0 çalışma dosyaları `dist/vendor/` içinde yereldir; lisansı yanında bulunur. Yerel/bot modları statik çalışabilir. İki cihaz modu aynı adreste Node/WebSocket sunucusuna ihtiyaç duyar; GitHub Pages tek başına yeterli değildir.
+`dist/engine.mjs` DOM'dan bağımsız kuralları içerir. `dist/auction-ui.mjs` gelecek lotların kimliğini arayüze aktarmadan gizler. `dist/arena-3d.mjs`, Three.js ile hazır iskeletli karakter modelleri, üç arena, ışık, gölge, enerji mermileri, ışın/yıldırım, kalkan ve darbe efektleri çizer. `dist/arena-ui.mjs` savaş panellerini, `dist/app.mjs` oynatımı yönetir. Three.js 0.180.0 çalışma dosyaları `dist/vendor/` içinde yereldir; lisansı yanında bulunur. Yerel/bot modları statik çalışabilir. İki cihaz modu yerelde Node/WebSocket, Vercel’de Function + ortak Redis kaydı kullanır; GitHub Pages tek başına yeterli değildir.
 
 Can: 65 + dayanıklılık × 12. Temel saldırı: güç × 1.5 + enerji × 1.15 + teknoloji × 0.65 + zekâ × 0.4 + 7. Uyum saldırıya eklenir; dayanıklılık normalde ×0.9, delici saldırıda ×0.3 hasar azaltır. Kritik ×1.5; özel hamle ×1.25. Hız ve zekâ hamle sırasına, hız farkı %2–16 kaçışa etki eder. Şans her vuruşta kritik ve hasar sapması yaratır. Hedefler yaşayan rakiplerden rastgele seçilir. 40 tur sınırında kalan can / başlangıç can oranı sonucu belirler.
 
@@ -98,18 +98,31 @@ Arşivde **Marvel bağları** rehberi, kahraman detaylarında eşleşmeler, aç�
 
 ### İnternet üzerinden yayınlama
 
-#### Vercel
+#### Vercel — oyun ve odalar aynı deploy'da
 
-`vercel.json` projeyi **Other** olarak seçer, `npm run build` çalıştırır ve `build/` klasörünü statik yayınlar. Root Directory depo kökü olmalı (boş veya `.`). `server.mjs` bir Vercel Function olarak derlenmez. Tarayıcı importlarındaki `?v=9` önbellek ekleri URL olarak korunur; derleyici bunları disk dosyası adı olarak çözmeye çalışmaz. Node sürümü `22.x` ile sabitlenmiştir. Vercel'de eski başarısız commit'i yeniden yayınlamak yerine son `main` commit'ini deploy edin.
+Proje artık **Vercel üzerinde hem oyunu hem çevrimiçi odaları çalıştırır**. Ayrı Node sunucusu, Render, Docker veya sunucu adresi gerekmez. Root Directory depo kökü olmalı (boş veya `.`); Node 22.x, build komutu, çıktı klasörü ve API ayarları `vercel.json` içindedir.
 
-Bu statik yayında aynı cihaz ve bot modu çalışır. **Çevrimiçi odalar için çalışan bir Node oda sunucusu gerekir.** Sunucu bağlanana kadar arayüz bunu açıkça gösterir ve olmayan `/ws` endpoint'ine tekrar tekrar bağlanmaz.
+İlk kurulum:
 
-1. Node/WebSocket ve kalıcı disk destekleyen sunucuda aşağıdaki `npm ci && npm start` veya Docker kurulumunu çalıştırın. Tek instance kullanın; `ROOM_DATA_FILE` kalıcı diskteki dosyayı göstermeli.
-2. Oda sunucusunda `ALLOWED_ORIGINS=https://oyununuz.vercel.app` ayarlayın. Özel alan adı da varsa virgülle ekleyin; joker karakter kabul edilmez. Preview adreslerini yalnızca gerektiğinde ayrıca ekleyin.
-3. Vercel → Settings → Environment Variables: `NEXUS_ROOM_SERVER_URL=https://oda-sunucunuz.example.com` ekleyin. Bu herkese açık sunucu adresidir; `/ws` uzantısı, gizli anahtar veya token eklemeyin. Production/Preview ortamlarını ayrı yapılandırın, sonra yeniden deploy edin.
-4. Vercel oyununda **Çevrimiçi → Oda oluştur** ile deneyin. Davet linki Vercel oyun adresini korur; oyuncular güvenli `wss://oda-sunucunuz.example.com/ws` üzerinden aynı sunucuya bağlanır. Oyuncu oturumları farklı sunucular arasında taşınmaz.
+1. Vercel projesinde **Storage → Create Database → Upstash Redis** seçin (mevcut veritabanı varsa **Connect**). Bu projeye Production ortamında bağlayın. Varsayılan değişken adlarını kullanın; URL veya token'ı elle kopyalamanız gerekmez.
+2. Son `main` commit'ini **Deploy / Redeploy** edin.
+3. Oyunda **Çevrimiçi → Oda oluştur** seçin; davet linkini arkadaşınıza gönderin. İkiniz de Hazırım dediğinizde müzayedeyi başlatın.
 
-Vercel artık [WebSocket Functions beta](https://vercel.com/docs/functions/websockets) sunuyor; ancak farklı bağlantıların/reconnect'lerin aynı instance'a ulaşacağı garantisi yok ve bağlantılar Function süre sınırında kapanır. Mevcut oyun tek süreçte oda yönetimi ve kalıcı dosya kullanır. Bu sunucuyu doğrudan bir Function'a koymak iki oyuncuyu farklı odalarda bırakabilir veya oda kaydını kaybettirebilir. Tam Vercel backend uyarlaması ortak kalıcı veri deposu, süreçler arası mesajlaşma ve dağıtık hamle/saat yönetimi gerektirir. Bu yayın düzeni mevcut Node sunucusunu korur.
+Veritabanının Vercel hesabınıza bağlanması kullanıcı tarafından bir kez tamamlanmalıdır; build script'i hesabınız adına bir servis satın almaz veya bağlantı yetkisi vermez. Entegrasyon `KV_REST_API_URL` / `KV_REST_API_TOKEN` veya `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` değişkenlerini sunucuya verir. Kod ikisini de otomatik tanır. Kayıtlar ilk oda oluşturulduğunda hazırlanır; SQL, migration veya manuel tablo oluşturma yoktur. Yeniden deploy'da aynı veritabanını bağlı tutun.
+
+`npm run build` tüm oyun dosyalarını `build/` içine hazırlar. `api/room.mjs` bir Vercel Function'dır; istemci aynı alan adındaki `/api/room` üzerinden senkronize olur. Davet linki otomatik mevcut oyun adresini kullanır; `PUBLIC_URL`, `ALLOWED_ORIGINS` veya `NEXUS_ROOM_SERVER_URL` girmeniz gerekmez. Son değişken yalnızca eski ayrı WebSocket sunucusu yöntemini bilerek kullanmak isteyenler için korunur; normal Vercel kurulumunda **boş bırakın**.
+
+API, oda durumunu Upstash Redis'te atomik karşılaştır-yaz işlemiyle saklar. Farklı Function instance'ları aynı oda kaydını okur; bir instance eski kaydı yeni bir teklifin üzerine yazamaz. Tekrar edilen istek kimlikleri ikinci kez coin harcamaz; istemci yanıtı kaybolmuş teklifleri otomatik yeniden göndermez. Oyuncu token'ları yalnızca JSON istek gövdesindedir, davet linkinde veya paylaşılan oda durumunda değildir; Redis kaydında SHA-256 özeti bulunur. Redis erişim anahtarları tarayıcıya gönderilmez.
+
+Mücadele ve teklif saatini yetkili sunucu istekleri ilerletir; sürekli çalışan süreç veya cron gerekmez. Bekleme odası yaklaşık 1,5 saniye, mücadele yaklaşık 650 ms aralıklarla kontrol edilir; güncellenmemiş durum yeniden çizilmez. 15 saniye kalp atışı alınamayan oyuncu çevrimdışı sayılır, saat/mücadele durur ve mevcut 2 dakikalık geri dönüş hakkı uygulanır. Tarayıcıyı uzun süre arka plana almak bağlantıyı beklemeye geçirebilir. Aynı oyuncu başka sekmede açılırsa önceki sekme devreden çıkar.
+
+Oda kayıtları yeniden deploy'dan bağımsızdır. Production ve Preview kayıtları ayrılır; Preview ortamını denemek için entegrasyonu o ortama da bağlayın. Gerekirse aynı veritabanını paylaşan farklı projeler için `NEXUS_ROOM_NAMESPACE` belirlenebilir. Kullanılmayan/çevrimdışı odalar temizlenir; tüm ortak kayıt 24 saat hareketsizlikten sonra sona erer. Bu kişisel oyun sürümünde Vercel ortak kaydı en fazla 20 oda / 3 MB ile sınırlandırılmıştır. İstek başına 4 KB, IP başına dakikada 300 istek ve 30 giriş/oda açma sınırı vardır.
+
+Entegrasyon yoksa bot ve aynı cihaz modu çalışır; oda paneli eksik bağlantıyı açıkça gösterir. Kurulum durumu `GET /api/room` ile kontrol edilir; bu yanıt hiçbir erişim anahtarını açıklamaz. Veritabanı erişilemezse yeni teklif onaylanmaz. Vercel ve Upstash kullanım ücretleri seçilen plana ve istek miktarına bağlıdır; planınızı kurulum ekranında inceleyin.
+
+Testler: `npm test`. Ek olarak geçici Redis ortamında `NEXUS_TEST_REDIS_URL` / `NEXUS_TEST_REDIS_TOKEN` ile `node tools/verify-redis-rooms.mjs` gerçek atomik yazma, çakışan teklifler, geri dönüş ve tam savaş akışını doğrular; test anahtarlarını sonunda temizler. Bu değişkenler yalnızca doğrulama içindir, normal deploy için gerekmez.
+
+Kaynaklar: [Vercel–Upstash entegrasyonu](https://upstash.com/docs/redis/howto/vercelintegration), [Redis REST API](https://upstash.com/docs/redis/features/restapi).
 
 #### Node / Docker (oyun ve oda sunucusu birlikte)
 

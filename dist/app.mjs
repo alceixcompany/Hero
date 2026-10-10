@@ -1,15 +1,16 @@
-import {ROOM_SERVER_ORIGIN} from './deployment.mjs?v=9';
-import {HEROES,STAT_LABELS,ARENAS,hero,newGame,bid,pass,canBid,botDecision,synergy,createBattle,battleStep,battleCommand,botBattleCommand,setTactic,focusTarget} from './engine.mjs?v=9';
-import {auctionShow} from './auction-ui.mjs?v=9';
-import {RoomClient} from './room-client.mjs?v=9';
-import {roomBar,roomLobby} from './room-ui.mjs?v=9';
-import {arenaMarkup} from './arena-ui.mjs?v=9';
-import {patchArenaPage} from './arena-dom.mjs?v=9';
-import {Arena3D} from './arena-3d.mjs?v=9';
-import {CharacterPreview} from './character-preview.mjs?v=9';
-import {GameAudio} from './game-audio.mjs?v=9';
-import {draftBonds,heroBonds,bondGuide} from './link-ui.mjs?v=9';
-import {Soundtrack,MARVEL_TRACK} from './soundtrack.mjs?v=9';
+import {ROOM_SERVER_ORIGIN,ROOM_TRANSPORT} from './deployment.mjs';
+import {HttpRoomSocket} from './http-room-socket.mjs';
+import {HEROES,STAT_LABELS,ARENAS,hero,newGame,bid,pass,canBid,botDecision,synergy,createBattle,battleStep,battleCommand,botBattleCommand,setTactic,focusTarget} from './engine.mjs';
+import {auctionShow} from './auction-ui.mjs';
+import {RoomClient} from './room-client.mjs';
+import {roomBar,roomLobby} from './room-ui.mjs';
+import {arenaMarkup} from './arena-ui.mjs';
+import {patchArenaPage} from './arena-dom.mjs';
+import {Arena3D} from './arena-3d.mjs';
+import {CharacterPreview} from './character-preview.mjs';
+import {GameAudio} from './game-audio.mjs';
+import {draftBonds,heroBonds,bondGuide} from './link-ui.mjs';
+import {Soundtrack,MARVEL_TRACK} from './soundtrack.mjs';
 let characterPreview=null;
 const audio=new GameAudio({storage:localStorage,onState:()=>updateAudioStatus()});
 const soundtrack=new Soundtrack({audio,onState:status=>{const el=document.querySelector('#soundtrack-status');if(el){el.textContent=status;el.toggleAttribute('data-error',status.includes('seçebilirsin'));}}});
@@ -22,7 +23,7 @@ game??=newGame();let selectedBid=1,tab='auction',battle=null,playing=false,speed
 const save=()=>{if(room.session)return;try{localStorage.setItem('nexus-v1',JSON.stringify(game));}catch{}};
 const portrait=(h,cls='')=>`<div class="portrait ${cls}" role="img" aria-label="${esc(h.name)} çizgi roman portresi" style="--portrait:url('/assets/${h.id}.jpg');--hero-color:${h.color}"></div>`;
 let auctionRenderKey='',appliedRoomRev=-1,auctionRevealUntil=0,onlineBattleId=null,serverOffset=0,inviteBase=location.origin,networkInfo=null;
-const room=new RoomClient({onState:receiveRoomState,onStatus:()=>{if(room.status!=='connected')playing=false;if(room.session&&(room.status!=='connected'||room.snapshot?.rev===appliedRoomRev))render();},onError:message=>{toast(message);const el=document.querySelector('#room-form-error');if(el)el.textContent=message;},onLeft:restoreLocal});
+const room=new RoomClient({Socket:ROOM_TRANSPORT==='http'?HttpRoomSocket:WebSocket,onState:receiveRoomState,onStatus:()=>{if(room.status!=='connected')playing=false;if(room.session&&(room.status!=='connected'||room.snapshot?.rev===appliedRoomRev))render();},onError:message=>{toast(message);const el=document.querySelector('#room-form-error');if(el)el.textContent=message;},onLeft:restoreLocal});
 function recordAuctionBid(round,side,type,amount){game.auctionBids??=[];game.auctionBids.push({round,side,type,amount,at:Date.now()});game.auctionBids=game.auctionBids.slice(-100);}
 function receiveRoomState(s){
  clearTimeout(botTimer);clearTimeout(battleTimer);clearTimeout(resultTimer);serverOffset=s.serverNow-Date.now();
@@ -68,11 +69,17 @@ function updateAuctionClock(){
 }
 setInterval(updateAuctionClock,200);
 async function networkDetails(){
- if(ROOM_SERVER_ORIGIN!==undefined){networkInfo=null;inviteBase=location.origin;return;}
+ if(ROOM_TRANSPORT==='http'||ROOM_SERVER_ORIGIN!==undefined){networkInfo=null;inviteBase=location.origin;return;}
  try{const r=await fetch('/api/network');if(!r.ok)throw Error();networkInfo=await r.json();inviteBase=networkInfo.publicUrl||(['127.0.0.1','localhost'].includes(location.hostname)?networkInfo.lan[0]||location.origin:location.origin);}catch{networkInfo=null;}
 }
 function onlineForm(mode='create',code=''){
- showModal(`<div class="modal-inner"><div class="eyebrow">ARKADAŞINLA · İKİ CİHAZDAN</div><h2>Bir oda. İki rakip.</h2><p>Oda aç veya arkadaşının 6 karakterli koduyla katıl.</p><div class="room-join-tabs"><button data-action="room-form-mode" data-id="create" class="${mode==='create'?'active':''}">Oda oluştur</button><button data-action="room-form-mode" data-id="join" class="${mode==='join'?'active':''}">Kodla katıl</button></div><form id="room-form" data-mode="${mode}"><label class="form-label" for="room-name">Oyuncu adın<input id="room-name" name="name" maxlength="20" autocomplete="nickname" placeholder="Örn. Umid" value="${esc(game.players[0].name)}" required></label>${mode==='join'?`<label class="form-label" for="room-code">Oda kodu<input id="room-code" name="code" value="${esc(code)}" minlength="6" maxlength="6" pattern="[A-Za-z2-9]{6}" autocapitalize="characters" autocomplete="off" placeholder="ABC234" required></label>`:''}<button class="primary" type="submit" ${ROOM_SERVER_ORIGIN===null?'disabled':''}>${mode==='create'?'Oda oluştur →':'Odaya katıl →'}</button><p id="room-form-error" class="room-form-error" role="status"></p></form><p class="sound-note">${ROOM_SERVER_ORIGIN===null?'Bu yayında oda sunucusu henüz bağlanmadı. Şimdilik aynı cihazda veya bot ile oynayabilirsin.':ROOM_SERVER_ORIGIN?'Davet bağlantısını arkadaşınla paylaş; farklı cihaz ve ağlardan katılabilirsiniz.':'Aynı Wi-Fi’de yerel adresle oynayabilirsiniz. Farklı ağlar için bu Node sunucusunun internette yayınlanması gerekir.'}</p></div>`);void networkDetails();
+ showModal(`<div class="modal-inner"><div class="eyebrow">ARKADAŞINLA · İKİ CİHAZDAN</div><h2>Bir oda. İki rakip.</h2><p>Oda aç veya arkadaşının 6 karakterli koduyla katıl.</p><div class="room-join-tabs"><button data-action="room-form-mode" data-id="create" class="${mode==='create'?'active':''}">Oda oluştur</button><button data-action="room-form-mode" data-id="join" class="${mode==='join'?'active':''}">Kodla katıl</button></div><form id="room-form" data-mode="${mode}"><label class="form-label" for="room-name">Oyuncu adın<input id="room-name" name="name" maxlength="20" autocomplete="nickname" placeholder="Örn. Umid" value="${esc(game.players[0].name)}" required></label>${mode==='join'?`<label class="form-label" for="room-code">Oda kodu<input id="room-code" name="code" value="${esc(code)}" minlength="6" maxlength="6" pattern="[A-Za-z2-9]{6}" autocapitalize="characters" autocomplete="off" placeholder="ABC234" required></label>`:''}<button class="primary" type="submit" ${ROOM_SERVER_ORIGIN===null?'disabled':''}>${mode==='create'?'Oda oluştur →':'Odaya katıl →'}</button><p id="room-form-error" class="room-form-error" role="status"></p></form><p class="sound-note">${ROOM_SERVER_ORIGIN===null?'Bu yayında oda sunucusu henüz bağlanmadı. Şimdilik aynı cihazda veya bot ile oynayabilirsin.':ROOM_SERVER_ORIGIN||ROOM_TRANSPORT==='http'?'Davet bağlantısını arkadaşınla paylaş; farklı cihaz ve ağlardan katılabilirsiniz.':'Aynı Wi-Fi’de yerel adresle oynayabilirsiniz. Farklı ağlar için bu Node sunucusunun internette yayınlanması gerekir.'}</p></div>`);void networkDetails();if(ROOM_TRANSPORT==='http')void checkRoomService();
+}
+async function checkRoomService(){
+ const form=document.querySelector('#room-form');if(!form)return;
+ try{const response=await fetch('/api/room');const status=await response.json();if(document.querySelector('#room-form')!==form)return;
+  if(!status.configured){form.querySelector('[type=submit]').disabled=true;form.querySelector('#room-form-error').textContent='Çevrimiçi odalar bu yayında henüz etkinleştirilmedi. Yayın sahibi Vercel Storage üzerinden Upstash Redis bağlantısını tamamlamalı.';}
+ }catch{if(document.querySelector('#room-form')===form)form.querySelector('#room-form-error').textContent='Oda servisine şu anda ulaşılamıyor. Biraz sonra tekrar dene.';}
 }
 async function showInvite(){
  await networkDetails();const code=room.snapshot?.code||room.session?.code;if(!code)return;
@@ -114,6 +121,7 @@ function handleRoomAction(btn,action,id){
 }
 document.addEventListener('submit',e=>{
  if(e.target.id!=='room-form')return;e.preventDefault();
+ if(room.session&&['connecting','reconnecting'].includes(room.status))return;
  const f=e.target;clearTimeout(botTimer);clearTimeout(battleTimer);clearTimeout(resultTimer);playing=false;battle=null;lastEvent=null;tab='auction';immersive=false;
  room.begin(f.dataset.mode,f.elements.name.value,f.elements.code?.value);
 });

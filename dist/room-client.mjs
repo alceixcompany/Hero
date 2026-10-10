@@ -1,4 +1,4 @@
-import {ROOM_SERVER_ORIGIN} from './deployment.mjs?v=9';
+import {ROOM_SERVER_ORIGIN} from './deployment.mjs';
 const SESSION_KEY='nexus-room-v1';
 export function roomSocketUrl(origin=ROOM_SERVER_ORIGIN,page=location){
  if(origin===null)return null;
@@ -10,7 +10,7 @@ export function roomSocketUrl(origin=ROOM_SERVER_ORIGIN,page=location){
 const token=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),n=>n.toString(16).padStart(2,'0')).join('');
 export class RoomClient{
  constructor({onState,onStatus,onError,onLeft,storage=sessionStorage,Socket=WebSocket,serverOrigin=ROOM_SERVER_ORIGIN}={}){
-  Object.assign(this,{onState,onStatus,onError,onLeft,storage,Socket});this.url=roomSocketUrl(serverOrigin);this.sessionKey=serverOrigin?`${SESSION_KEY}:${this.url}`:SESSION_KEY;this.status='idle';this.snapshot=null;this.pending=null;this.retry=0;this.stopped=true;
+  Object.assign(this,{onState,onStatus,onError,onLeft,storage,Socket});this.url=roomSocketUrl(serverOrigin);this.sessionKey=(serverOrigin?`${SESSION_KEY}:${this.url}`:SESSION_KEY)+(Socket.transport==='http'?':http':'');this.status='idle';this.snapshot=null;this.pending=null;this.retry=0;this.stopped=true;
   try{this.session=this.url?JSON.parse(storage.getItem(this.sessionKey)):null;if(!this.session?.token||!this.session.type)this.session=null;}catch{this.session=null;}
  }
  setStatus(s){this.status=s;this.onStatus?.(s);}

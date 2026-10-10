@@ -1,13 +1,13 @@
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/addons/loaders/GLTFLoader.js';
-import {CameraRig,cameraGoal} from './camera-rig.mjs?v=9';
-import {advanceExchange,retimeExchange,exchangeMotion,avoidCrowding} from './arena-motion.mjs?v=9';
-import {hero} from './engine.mjs?v=9';
-import {loadCharacter} from './character-models.mjs?v=9';
-import {profileFor} from './character-profiles.mjs?v=9';
-import {syncFighterLife,shouldFall} from './fighter-life.mjs?v=9';
+import {CameraRig,cameraGoal} from './camera-rig.mjs';
+import {advanceExchange,retimeExchange,exchangeMotion,avoidCrowding} from './arena-motion.mjs';
+import {hero} from './engine.mjs';
+import {loadCharacter} from './character-models.mjs';
+import {profileFor} from './character-profiles.mjs';
+import {syncFighterLife,shouldFall} from './fighter-life.mjs';
 
-import {addAtmosphere} from './arena-atmosphere.mjs?v=9';
+import {addAtmosphere} from './arena-atmosphere.mjs';
 
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));

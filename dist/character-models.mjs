@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/addons/loaders/GLTFLoader.js';
 import {clone} from './vendor/addons/utils/SkeletonUtils.js';
-import {profileFor} from './character-profiles.mjs?v=9';
+import {profileFor} from './character-profiles.mjs';
 
 const folder='/assets/characters/', loader=new GLTFLoader(), cache=new Map();
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);

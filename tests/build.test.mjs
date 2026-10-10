@@ -10,7 +10,7 @@ test('static deployment ships the entire browser module graph, import map and mo
  const dir=await mkdtemp(join(tmpdir(),'nexus-build-')),output=join(dir,'static');
  try{
   await buildStatic({output,roomServer:''});
-  const config=await import(pathToFileURL(join(output,'deployment.mjs')));assert.equal(config.ROOM_SERVER_ORIGIN,null);
+  const config=await import(pathToFileURL(join(output,'deployment.mjs')));assert.equal(config.ROOM_SERVER_ORIGIN,undefined);assert.equal(config.ROOM_TRANSPORT,'http');
   const html=await readFile(join(output,'index.html'),'utf8');assert.match(html,/app\.mjs\?v=9/);assert.match(html,/vendor\/three\.module\.js/);
   for(const name of await readdir(output)){
    if(!name.endsWith('.mjs'))continue;
